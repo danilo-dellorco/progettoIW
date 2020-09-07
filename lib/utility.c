@@ -55,7 +55,7 @@ void set_timer(int micro){
 	it_val.it_interval.tv_sec = 0;
 	it_val.it_interval.tv_usec = 0;
 	if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
-		perror("setitimer");
+		perror("Set Timer Error:");
 		exit(1);
 	}
 }

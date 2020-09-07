@@ -17,7 +17,6 @@
 int ReceiveBase, WindowEnd; // Tengono traccia della base e della fine della finestra di ricezione
 int tot_pkts;				// Numero totale di pacchetti da ricevere
 int tot_received;			// Contatore del numero di pacchetti bufferizzati correttamente
-//int num_packet_lost;		// Conta il numero di pacchetti persi (utile per l'analisi delle prestazioni)
 int *check_pkt_received;	// Array di interi che mantiene lo stato di ricezione dei pacchetti
 bool allocated;				// Permette di allocare le risorse soltanto alla prima passata nel ciclo while
 
@@ -37,6 +36,8 @@ void initialize_recv();
 
 // Gestisce la ricezioni di pacchetti secondo il protocollo TCP
 int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
+	int num_packet_disorder = 0;	// Conta il numero di pacchetti ricevuti non in ordine
+	int num_packet_discarded = 0;	// Conta il numero di pacchetti scartati perchè fuori dalla finestra di trasmissione
 	srand (time(NULL)); // Randomizza la scelta dei numeri per la simulazione della perdita dei pacchetti
 	initialize_recv();
 	socklen_t addr_len=sizeof(struct sockaddr_in);
@@ -78,6 +79,7 @@ recv_start:
 				print_percentage(tot_received,tot_pkts,tot_received-1);
 				memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
 				pkt[new_pkt.seq_num-1] = new_pkt;
+				num_packet_disorder++;
 			}
 
 			// Arrivo ordinato di segmento con numero di sequenza atteso
@@ -89,19 +91,25 @@ recv_start:
 				pkt[new_pkt.seq_num-1] = new_pkt;
 			}
 
+			// Pacchetto fuori dalla finestra di ricezione non viene bufferizzato
+			else{
+				num_packet_discarded++;
+			}
+
 			send_cumulative_ack(ReceiveBase, socket);
 
 	}
 
 	// Ricevuti tutti i pacchetti termino la trasmissione
 	printf("\n\n================ Transmission end =================\n");
-	//printf("Pacchetti da scrivere: %d\nPacchetti persi: %d\n", tot_pkts,num_packet_lost);
+	printf ("File transfer finished\n");
+	printf("Packets Received: %d\nPackets not ordered: %d\nPackets discarded: %d\n", tot_pkts,num_packet_disorder, num_packet_discarded);
 
 	// Scrivo un pacchetto per volta in ordine sul file
 	for(i=0; i<tot_pkts; i++){
 		write(fd, pkt[i].data, pkt[i].pkt_dim);
 	}
-	//printf("===================================================\n");
+	printf("===================================================\n");
 
 }
 
