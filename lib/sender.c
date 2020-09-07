@@ -23,6 +23,8 @@ void update_timeout(packet to_pkt);
 void end_transmission();
 void retransmission(int rtx_ind, char *message);
 void cumulative_ack(int received_ack);
+void set_packet_sent(int index);
+int send_packet(int index);
 
 // ACK CUMULATIVO UTILIZZATO: Inviare un ACK = N indica che tutti i pacchetti fino a N-1 sono stati ricevuti e che ora aspetto il pacchetto numero N
 
@@ -32,7 +34,9 @@ int WindowEnd;		// Fine della finestra di trasmissione
 int ack_num;		// Tiene traccia dell'ultimo ACK ricevuto
 int tot_acked;		// Contatore del numero totale di pacchetti che sono stati riscontrati correttamente
 int tot_pkts;		// Numero dei pacchetti da inviare
+int num_packet_lost;
 int sock;
+
 
 bool fileTransfer = true;						// Termina l'invio dei pacchetti quando posto a false
 bool isTimerStarted = false;					// Impostato a true quando è in funzione il timer di un pacchetto, false altrimenti
@@ -80,6 +84,7 @@ void initialize_send(){
 	timeoutInterval = 500000;
 	estimatedRTT = 1000;
 	devRTT = 1;
+	num_packet_lost = 0;
 }
 
 // Thread che gestisce la ricezione degli ack da parte del ricevente, compresi gli ack duplicati
@@ -190,14 +195,11 @@ void send_window(int socket, struct sockaddr_in *client_addr, packet *pkt){
 			set_timer(timeoutInterval);
 			isTimerStarted = true;
 		}
-		//printf("%s Inviato PKT num: %d\n",time_stamp(),pkt[i].seq_num);
-		pkt[i].sent_time = time_now();
-		if (sendto(socket, pkt+i, PKT_SIZE, 0, (struct sockaddr *)client_addr, addr_len)<0){
-			perror ("PACKET LOST (1)");
-		}
-		else {			
+
+		if (send_packet(i)>0){
+			set_packet_sent(i);
 			NextSeqNum++;
-			check_pkt[i]=1;
+			check_pkt[i] = 1;
 		}
 	}
 }
@@ -206,6 +208,13 @@ void timeout_routine(){
 	isTimerStarted = false;
 	retransmission(SendBase-1, "TIMEOUT EXPIRED    ");
 	return;
+}
+
+void set_packet_sent(int index){
+	if (check_pkt[index] == 0){
+		pkt[index].sent_time = time_now();
+		check_pkt[index] = 1;
+	}
 }
 
 // Aggiorna l'attuale valore del Retransmission Timeout
@@ -223,17 +232,10 @@ void retransmission(int rtx_ind, char *message){
 	if (!fileTransfer){
 		return;
 	}
-	if (check_pkt[rtx_ind] == 0) {
-		pkt[rtx_ind].sent_time = time_now();
-		check_pkt[rtx_ind] = 1;
-	}
-	if (sendto(sock, pkt+rtx_ind, PKT_SIZE, 0, (struct sockaddr *)client_addr, addr_len)<0){
-		perror("Errore ritrasmissione pkt");
-	}else{
-		set_timer(timeoutInterval);
-		isTimerStarted = true;
-		//printf("%s %s | RTX PKT: %d\n",time_stamp(),message, (pkt+rtx_ind)->seq_num);
-	}
+	set_packet_sent(rtx_ind);
+	send_packet(rtx_ind);
+	set_timer(timeoutInterval);
+	isTimerStarted = true;
 }
 
 // Imposta come acked tutti i pacchetti con numero di sequenza inferiore a quello ricevuto
@@ -253,6 +255,22 @@ void end_transmission(){
 	double tm=transferEnd.tv_sec-transferStart.tv_sec+(double)(transferEnd.tv_usec-transferStart.tv_usec)/1000000;
 	double tp=file_dim/tm;
 	printf("Transfer time: %f sec [%f KB/s]\n", tm, tp/1024);
+	printf("Packets total: %d\n",tot_pkts);
+	printf("Packets lost : %d\n", num_packet_lost);
 	printf("===================================================\n");
+}
+
+int send_packet(int index){
+	if (is_packet_lost(LOST_PROB)){
+		set_packet_sent(index);
+		num_packet_lost++;
+		return -1;
+	}
+	if (sendto(sock, pkt+index, PKT_SIZE, 0, (struct sockaddr *)client_addr, addr_len)<0){
+		perror ("Sendto Error");
+		num_packet_lost++;
+		return -1;
+	}
+	return 1;
 }
 

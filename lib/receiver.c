@@ -17,7 +17,7 @@
 int ReceiveBase, WindowEnd; // Tengono traccia della base e della fine della finestra di ricezione
 int tot_pkts;				// Numero totale di pacchetti da ricevere
 int tot_received;			// Contatore del numero di pacchetti bufferizzati correttamente
-int num_packet_lost;		// Conta il numero di pacchetti persi (utile per l'analisi delle prestazioni)
+//int num_packet_lost;		// Conta il numero di pacchetti persi (utile per l'analisi delle prestazioni)
 int *check_pkt_received;	// Array di interi che mantiene lo stato di ricezione dei pacchetti
 bool allocated;				// Permette di allocare le risorse soltanto alla prima passata nel ciclo while
 
@@ -57,11 +57,10 @@ recv_start:
 
 		// Alloca le risorse per i pacchetti in ricezione e per l'array di interi che tiene traccia dei pacchetti ricevuti
 		if (!allocated){
-
 			// Scarto eventuali pacchetti restati in volo dalle precedenti ritrasmissioni 
 			if (new_pkt.seq_num != 1){
-				printf ("Scartato Pacchetto spazzatura: %d\n",new_pkt.seq_num); 
-				goto recv_start;
+				//printf ("Scartato Pacchetto spazzatura: %d\n",new_pkt.seq_num); 
+				//goto recv_start;
 			}
 			tot_pkts = new_pkt.num_pkts;
 			pkt=calloc(tot_pkts, sizeof(packet));
@@ -69,13 +68,8 @@ recv_start:
 			allocated = true;
 		}
 
-		// Viene simulata la perdita del pacchetto
-		if (is_packet_lost(LOST_PROB)){
-			num_packet_lost++;
-		}
-
 		// Il pacchetto è arrivato correttamente e viene gestito da TCP
-		else {
+
 			//printf ("%s Ricevuto:%d | Atteso:%d | Finestra [%d:%d]\n",time_stamp(), new_pkt.seq_num, ReceiveBase, ReceiveBase, WindowEnd);
 			
 			// Arrivo di un nuovo pacchetto non in ordine
@@ -84,7 +78,6 @@ recv_start:
 				print_percentage(tot_received,tot_pkts,tot_received-1);
 				memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
 				pkt[new_pkt.seq_num-1] = new_pkt;
-				//send_cumulative_ack(ReceiveBase, socket);	
 			}
 
 			// Arrivo ordinato di segmento con numero di sequenza atteso
@@ -94,26 +87,21 @@ recv_start:
 				move_window();
 				memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
 				pkt[new_pkt.seq_num-1] = new_pkt;
-				//send_cumulative_ack(ReceiveBase,socket);
 			}
 
-			// Il pacchetto è fuori finestra o duplicato, quindi non viene bufferizzato
+			send_cumulative_ack(ReceiveBase, socket);
 
-				//printf ("PACCHETTO SCARTATO\n");
-				send_cumulative_ack(ReceiveBase, socket);
-			
-		}
 	}
 
 	// Ricevuti tutti i pacchetti termino la trasmissione
 	printf("\n\n================ Transmission end =================\n");
-	printf("Pacchetti da scrivere: %d\nPacchetti persi: %d\n", tot_pkts,num_packet_lost);
+	//printf("Pacchetti da scrivere: %d\nPacchetti persi: %d\n", tot_pkts,num_packet_lost);
 
 	// Scrivo un pacchetto per volta in ordine sul file
 	for(i=0; i<tot_pkts; i++){
 		write(fd, pkt[i].data, pkt[i].pkt_dim);
 	}
-	printf("===================================================\n");
+	//printf("===================================================\n");
 
 }
 
@@ -161,6 +149,6 @@ void initialize_recv(){
 	tot_pkts = 1;
 	allocated = false;
 	tot_received = 0;
-	num_packet_lost = 0;
+	//num_packet_lost = 0;
 }
 
