@@ -95,8 +95,7 @@ void *receive_ack(void *arg){
 		if (recvfrom(socket, &ack_num, sizeof(int), 0, (struct sockaddr *)client_addr, &addr_len) < 0){
 			perror ("Errore ricezione ack");
 			exit(-1);
-		}
-		
+		}	
 		//printf ("%s SendBase: %d | Ricevuto ACK numero: %d\n",time_stamp(),SendBase,ack_num);
 
 		// Ricevuto ACK non duplicato
@@ -182,7 +181,6 @@ void send_window(int socket, struct sockaddr_in *client_addr, packet *pkt){
 	signal(SIGALRM, timeout_routine);
 	int i, j;
 	socklen_t addr_len = sizeof(struct sockaddr_in);
-	//printf ("SEND WINDOW | SendBase:%d | WindowEnd:%d | NextSeqNum: %d\n", SendBase,WindowEnd,NextSeqNum);
 
 	// Caso in cui la finestra non è ancora piena di pkt in volo	
 	for(i=NextSeqNum-1; i<WindowEnd; i++){
@@ -220,18 +218,6 @@ void update_timeout(packet to_pkt) {
 	timeoutInterval = (estimatedRTT + 4 * devRTT);
 }
 
-// Stoppa il timer e stampa il tempo impiegato per l'invio del file
-void end_transmission(){
-	printf("\n\n================ Transmission end =================\n");
-	set_timer(0);
-	printf("File transfer finished\n");
-	gettimeofday(&transferEnd, NULL);
-	double tm=transferEnd.tv_sec-transferStart.tv_sec+(double)(transferEnd.tv_usec-transferStart.tv_usec)/1000000;
-	double tp=file_dim/tm;
-	printf("Transfer time: %f sec [%f KB/s]\n", tm, tp/1024);
-	printf("===================================================\n");
-}
-
 // Ritrasmette immediatamente il pacchetto passato come parametro
 void retransmission(int rtx_ind, char *message){
 	if (!fileTransfer){
@@ -256,5 +242,17 @@ void cumulative_ack(int received_ack){
 	for (int k = SendBase-1; k<received_ack-1; k++){
 		check_pkt[k] = 2;
 	}	
+}
+
+// Stoppa il timer e stampa il tempo impiegato per l'invio del file
+void end_transmission(){
+	printf("\n\n================ Transmission end =================\n");
+	set_timer(0);
+	printf("File transfer finished\n");
+	gettimeofday(&transferEnd, NULL);
+	double tm=transferEnd.tv_sec-transferStart.tv_sec+(double)(transferEnd.tv_usec-transferStart.tv_usec)/1000000;
+	double tp=file_dim/tm;
+	printf("Transfer time: %f sec [%f KB/s]\n", tm, tp/1024);
+	printf("===================================================\n");
 }
 
