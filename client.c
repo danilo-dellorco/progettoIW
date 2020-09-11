@@ -17,6 +17,7 @@ void client_setup_conn (int*, struct sockaddr_in*);
 void client_reliable_conn (int, struct sockaddr_in*);
 void client_reliable_close (int client_sock, struct sockaddr_in *server_addr);
 int client_folder_files(char *list_files[MAX_FILE_LIST]);
+void* alarm_routine();
 
 
 
@@ -274,22 +275,28 @@ void client_reliable_close (int client_sock, struct sockaddr_in *server_addr) {
 
 finack_wait:
 	// In attesa del FINACK
+	signal(SIGALRM, (void(*) (int))alarm_routine);
+	alarm(1);
 	memset(buff, 0, sizeof(buff));
 	control = recvfrom(client_sock, buff, strlen(FINACK), 0, (struct sockaddr *)server_addr, &addr_len);
 	if (control < 0 || strncmp(buff, FINACK, strlen(FINACK)) != 0) {
 		goto finack_wait;
 	}
+	alarm(0);
 	printf("%s CLIENT: ricevuto FINACK\n", time_stamp());
 
 fin_wait:
+	signal(SIGALRM, (void(*) (int))alarm_routine);
+	alarm(1);
 	// In attesa del FIN
 	memset(buff, 0, sizeof(buff));
 	control = recvfrom(client_sock, buff, strlen(FIN), 0, (struct sockaddr *)server_addr, &addr_len);
 	if (control < 0 || strncmp(buff, FIN, strlen(FIN)) != 0) {
 		goto fin_wait;
 	}
+	alarm(0);
 	printf("%s CLIENT: ricevuto FIN\n", time_stamp());
-
+	
 	// Invio del FINACK
 	printf("%s CLIENT: invio FINACK\n", time_stamp());
 	control = sendto(client_sock, FINACK, strlen(FINACK), 0, (struct sockaddr *)server_addr, addr_len);
@@ -297,12 +304,16 @@ fin_wait:
 		printf("CLIENT: close connection failed (sending FINACK)\n");
 		exit(-1);
 	}		
-
+	
 	// Connessione chiusa
 	printf("CLIENT: connection closed\n");
 	printf("===================================================\n\n");
 }
 
+void* alarm_routine(){
+	printf("Connection closed with error: timeout expired\n");
+    exit(-1);
+}
 
 /*Apre la cartella e prende tutti i nomi dei file presenti in essa,
 inserendoli in un buffer e ritornando il numero di file presenti */
