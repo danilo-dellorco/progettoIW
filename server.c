@@ -23,31 +23,52 @@ void* alarm_routine();
 
 
 int main(int argc, char **argv){
-    int server_sock;
+    int server_sock, child_sock;
     struct sockaddr_in server_address, client_address;
     socklen_t addr_len = sizeof(client_address);
     char *buff = calloc(PKT_SIZE, sizeof(char));
     char *path = calloc(PKT_SIZE, sizeof(char));
     char *buffToSend = calloc(PKT_SIZE, sizeof(char));
     FILE *fptr;
-		int fd;
+	pid_t pid;
+    int fd;
     int control, num_files;
 		char *list_files[MAX_FILE_LIST];
 
+    clearScreen();
+    
     server_setup_conn(&server_sock, &server_address);
-    server_reliable_conn(server_sock, &client_address);
 
     while (1) {
+		set_timeout(server_sock, 0);//recvfrom all'inizio è bloccante (si fa con timeout==0)
+
+    if (server_reliable_conn(server_sock, &client_address) == 0){ //se un client non riesce a ben connettersi, il server non forka
+    pid = fork();
+    
+    if (pid < 0){
+        printf("SERVER: fork error\n");
+        // exit o return
+    }
+    if (pid == 0){
+        pid = getpid();
+        child_sock = create_socket(REQUEST_SEC); //REQUEST_SEC secondi di timeout per scegliere il servizio
+
+        control = sendto(child_sock, READY, strlen(READY), 0, (struct sockaddr *)&client_address, addr_len);
+		if (control < 0) {
+			printf("SERVER %d: port comunication failed\n", pid);
+		}
+
 
     request:
-        printf("\n\n=======================================\n");
+        printf("\n=======================================\n");
         printf("> Server waiting for request....\n");
         memset(buff, 0, sizeof(buff));
 
-        if (recvfrom(server_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len) < 0){
+        if (recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len) < 0){
             printf("> request failed\n");
             free(buff);
             free(path);
+            close(child_sock);
             return 0;
         }
 
@@ -64,7 +85,7 @@ int main(int argc, char **argv){
                 fd = open("file_list.txt", O_CREAT | O_TRUNC | O_RDWR, 0666);
                 if(fd<0){
                     printf("SERVER: error opening file_list\n");
-                    close(server_sock);
+                    close(child_sock);
                     return 1;
                  }
 
@@ -80,7 +101,7 @@ int main(int argc, char **argv){
                 read(fd, (void *)&buffToSend, strlen(buffToSend));
 
                 // Inizio l'invio del file
-                sender(server_sock, &client_address,fd);
+                sender(child_sock, &client_address,fd);
                 close(fd);
                 remove("file_list.txt");
                 break;
@@ -89,13 +110,13 @@ int main(int argc, char **argv){
             case GET:
                 printf("> DOWNLOAD request\n");
                 memset(buff, 0, sizeof(buff));
-                control = recvfrom(server_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len); 
+                control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len); 
                 if (control < 0) {
                     printf("SERVER: file transfer failed (1)\n");
                     perror("ERROR");
                     free(buff);
                     free(path);
-                    close(server_sock);
+                    close(child_sock);
                     return 1;
                 }
 
@@ -120,7 +141,7 @@ int main(int argc, char **argv){
 
                     free(buff);
                     free(path);
-                    close(server_sock);
+                    close(child_sock);
                     return 1;
                 }
 
@@ -132,7 +153,7 @@ int main(int argc, char **argv){
                 printf("=======================================\n\n");
 
                 // Inizio l'invio del file
-                sender(server_sock, &client_address,fd);          
+                sender(child_sock, &client_address,fd);          
                 break;
 
 //**************************************************************************************************************************************
@@ -140,12 +161,12 @@ int main(int argc, char **argv){
                 printf("> UPLOAD request\n");
                 printf("=======================================\n\n");
                 memset(buff, 0, sizeof(buff));
-                control = recvfrom(server_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len);
+                control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len);
                 if (control < 0) {
                     printf("%s SERVER: file transfer failed (1)\n",time_stamp());
                     free(buff);
                     free(path);
-                    close(server_sock);
+                    close(child_sock);
                     return 1;
                 }
                 snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff);
@@ -165,13 +186,13 @@ int main(int argc, char **argv){
                 fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
 
                 // Inizio la ricezione del file
-                control=receiver(server_sock, &client_address,fd);
+                control=receiver(child_sock, &client_address,fd);
                 if(control == -1) {
                     close(fd);
                     remove(path);
                     free(buff);
                     free(path);
-                    close(server_sock);
+                    close(child_sock);
                     return 1;
                 }
                 close(fd);
@@ -179,19 +200,22 @@ int main(int argc, char **argv){
 
 //**************************************************************************************************************************************
             case CLOSE:
-                server_reliable_close(server_sock, &client_address);
+                server_reliable_close(child_sock, &client_address);
                 free(buff);
                 free(path);
-                close(server_sock);
+                close(child_sock);
                 return 0;
 
 //**************************************************************************************************************************************
             default:
                 printf("Wrong request\n\n");
                 break;  
+         }
+            goto request;
+            }
         }
-        goto request;
     }
+    return 0;
 }
 
 

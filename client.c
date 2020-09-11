@@ -34,9 +34,16 @@ int main (int argc, char** argv) {
 	off_t end_file, file_control;
 	char *list_files[MAX_FILE_LIST];
 	char buf[1200];
+	clearScreen();
 	client_setup_conn(&client_sock , &server_address);
 	client_reliable_conn(client_sock, &server_address);
   	memset(buff, 0, sizeof(buff));
+	
+	control = recvfrom(client_sock, buff, strlen(READY), 0, (struct sockaddr *)&server_address, &addr_len);
+	if (control < 0) {
+		printf("CLIENT: server dispatching failed\n");
+		exit(-1);
+	}
 
 menu:
 	printf("\n\n============= COMMAND LIST ================\n");
