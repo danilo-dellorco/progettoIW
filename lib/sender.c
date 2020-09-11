@@ -195,12 +195,8 @@ void send_window(int socket, struct sockaddr_in *client_addr, packet *pkt){
 			set_timer(timeoutInterval);
 			isTimerStarted = true;
 		}
-
-		if (send_packet(i)>0){
-			set_packet_sent(i);
-			NextSeqNum++;
-			check_pkt[i] = 1;
-		}
+		send_packet(i);
+		NextSeqNum++;
 	}
 }
 
@@ -232,7 +228,6 @@ void retransmission(int rtx_ind, char *message){
 	if (!fileTransfer){
 		return;
 	}
-	set_packet_sent(rtx_ind);
 	send_packet(rtx_ind);
 	set_timer(timeoutInterval);
 	isTimerStarted = true;
@@ -263,12 +258,12 @@ void end_transmission(){
 int send_packet(int index){
 	set_packet_sent(index);
 	if (is_packet_lost(LOST_PROB)){
+		set_packet_sent(index);
 		num_packet_lost++;
-		return -1;
+		return 0;
 	}
 	if (sendto(sock, pkt+index, PKT_SIZE, 0, (struct sockaddr *)client_addr, addr_len)<0){
 		perror ("Sendto Error");
-		num_packet_lost++;
 		return -1;
 	}
 	return 1;
