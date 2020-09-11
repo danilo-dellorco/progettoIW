@@ -261,8 +261,8 @@ void end_transmission(){
 }
 
 int send_packet(int index){
+	set_packet_sent(index);
 	if (is_packet_lost(LOST_PROB)){
-		set_packet_sent(index);
 		num_packet_lost++;
 		return -1;
 	}

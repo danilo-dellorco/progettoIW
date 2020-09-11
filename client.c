@@ -251,14 +251,6 @@ void client_reliable_conn (int client_sock, struct sockaddr_in *server_addr) {
 		exit(-1);
 	}
 
-  	// Invio del ACK_SYNACK
-  	printf("%s CLIENT: invio ACK_SYNACK\n", time_stamp());
-	control = sendto(client_sock, ACK_SYNACK, strlen(ACK_SYNACK), 0, (struct sockaddr *)server_addr, addr_len);
-	if (control < 0) {
-		printf("CLIENT: connection failed (sending ACK_SYNACK)\n");
-		exit(-1);
-	}
-
 	// Connessione stabilita
 	printf("%s CLIENT: connection established\n", time_stamp());
 	printf("===================================================\n\n");

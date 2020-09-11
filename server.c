@@ -251,16 +251,7 @@ int server_reliable_conn (int server_sock, struct sockaddr_in* client_addr) {
         return 1;
     }
 
-    // In attesa del ACK_SYNACK
-    memset(buff, 0, sizeof(buff));
-    control = recvfrom(server_sock, buff, PKT_SIZE, 0, (struct sockaddr *)client_addr, &addr_len);
-    if (control < 0 || strncmp(buff, ACK_SYNACK, strlen(ACK_SYNACK)) != 0) {
-        printf("SERVER: connection failed (receiving ACK_SYNACK)\n");
-        return 1;
-    }
-
     // Connessione stabilita
-    printf("%s SERVER: ricevuto ACK_SYNACK\n", time_stamp());
     printf("%s SERVER: connection established\n", time_stamp());
     printf("====================================================\n\n");
     return 0;

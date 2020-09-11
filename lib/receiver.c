@@ -95,7 +95,6 @@ recv_start:
 			else{
 				num_packet_discarded++;
 			}
-
 			send_cumulative_ack(ReceiveBase, socket);
 
 	}
