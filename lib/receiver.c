@@ -18,7 +18,7 @@ int ReceiveBase, WindowEnd; // Tengono traccia della base e della fine della fin
 int tot_pkts;				// Numero totale di pacchetti da ricevere
 int tot_received;			// Contatore del numero di pacchetti bufferizzati correttamente
 int *check_pkt_received;	// Array di interi che mantiene lo stato di ricezione dei pacchetti
-bool allocated;				// Permette di allocare le risorse soltanto alla prima passata nel ciclo while
+bool allocated,cleared;				// Permette di allocare le risorse soltanto alla prima passata nel ciclo while
 
 packet new_pkt, *pkt;
 socklen_t addr_len = sizeof(struct sockaddr_in);
@@ -30,6 +30,7 @@ void mark_recvd(int seq);
 int is_received(int seq);
 void move_window();
 void initialize_recv();
+void clear_junk(int sock, struct sockaddr* addr );
 
 
 
@@ -50,7 +51,6 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 	while(tot_received != tot_pkts){							
 		memset(&new_pkt, 0, sizeof(packet));
 
-recv_start:
 		if((recvfrom(socket, &new_pkt, PKT_SIZE, 0, (struct sockaddr *)sender_addr, &addr_len)<0)) {
 			perror("error receive pkt ");
 			continue;
@@ -58,47 +58,39 @@ recv_start:
 
 		// Alloca le risorse per i pacchetti in ricezione e per l'array di interi che tiene traccia dei pacchetti ricevuti
 		if (!allocated){
-			// Scarto eventuali pacchetti restati in volo dalle precedenti ritrasmissioni 
-			if (new_pkt.seq_num != 1){
-				//printf ("Scartato Pacchetto spazzatura: %d\n",new_pkt.seq_num); 
-				//goto recv_start;
-			}
 			tot_pkts = new_pkt.num_pkts;
 			pkt=calloc(tot_pkts, sizeof(packet));
 			check_pkt_received=calloc(tot_pkts, sizeof(int));
 			allocated = true;
 		}
 
-		// Il pacchetto è arrivato correttamente e viene gestito da TCP
+		//printf ("%s Ricevuto:%d | Atteso:%d | Finestra [%d:%d]\n",time_stamp(), new_pkt.seq_num, ReceiveBase, ReceiveBase, WindowEnd);
+		
+		// Arrivo di un nuovo pacchetto non in ordine
+		if (ReceiveBase < new_pkt.seq_num && new_pkt.seq_num <= WindowEnd && !is_received(new_pkt.seq_num)){
+			mark_recvd(new_pkt.seq_num);
+			print_percentage(tot_received,tot_pkts,tot_received-1);
+			memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
+			pkt[new_pkt.seq_num-1] = new_pkt;
+			num_packet_disorder++;
+		}
 
-			//printf ("%s Ricevuto:%d | Atteso:%d | Finestra [%d:%d]\n",time_stamp(), new_pkt.seq_num, ReceiveBase, ReceiveBase, WindowEnd);
-			
-			// Arrivo di un nuovo pacchetto non in ordine
-			if (ReceiveBase < new_pkt.seq_num && new_pkt.seq_num <= WindowEnd && !is_received(new_pkt.seq_num)){
-				mark_recvd(new_pkt.seq_num);
-				print_percentage(tot_received,tot_pkts,tot_received-1);
-				memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
-				pkt[new_pkt.seq_num-1] = new_pkt;
-				num_packet_disorder++;
-			}
+		// Arrivo ordinato di segmento con numero di sequenza atteso
+		else if (new_pkt.seq_num == ReceiveBase){
+			mark_recvd(new_pkt.seq_num);
+			print_percentage(tot_received,tot_pkts,tot_received-1);
+			move_window();
+			memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
+			pkt[new_pkt.seq_num-1] = new_pkt;
+		}
 
-			// Arrivo ordinato di segmento con numero di sequenza atteso
-			else if (new_pkt.seq_num == ReceiveBase){
-				mark_recvd(new_pkt.seq_num);
-				print_percentage(tot_received,tot_pkts,tot_received-1);
-				move_window();
-				memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
-				pkt[new_pkt.seq_num-1] = new_pkt;
-			}
-
-			// Pacchetto fuori dalla finestra di ricezione non viene bufferizzato
-			else{
-				num_packet_discarded++;
-			}
-			send_cumulative_ack(ReceiveBase, socket);
+		// Pacchetto fuori dalla finestra di ricezione non viene bufferizzato
+		else{
+			num_packet_discarded++;
+		}
+		send_cumulative_ack(ReceiveBase, socket);
 
 	}
-
 	// Ricevuti tutti i pacchetti termino la trasmissione
 	printf("\n\n================ Transmission end =================\n");
 	printf ("File transfer finished\n");
@@ -109,7 +101,7 @@ recv_start:
 		write(fd, pkt[i].data, pkt[i].pkt_dim);
 	}
 	printf("===================================================\n");
-
+	clear_junk(socket,(struct sockaddr *)sender_addr);
 }
 
 // Invia un ACK cumulativo al mittente
@@ -155,7 +147,23 @@ void initialize_recv(){
 	WindowEnd = RECV_WIN;
 	tot_pkts = 1;
 	allocated = false;
+	cleared = false;
 	tot_received = 0;
 	//num_packet_lost = 0;
 }
+
+
+void clear_junk(int sock, struct sockaddr* addr){
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 500000;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	while (recvfrom(sock, &new_pkt, PKT_SIZE, 0, addr, &addr_len)>=0){
+		printf ("scartato pacchetto\n");
+	}
+	printf ("terminata pulizia\n");
+	tv.tv_usec = 0;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+}
+
 

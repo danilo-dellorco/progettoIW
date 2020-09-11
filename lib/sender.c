@@ -202,7 +202,7 @@ void send_window(int socket, struct sockaddr_in *client_addr, packet *pkt){
 
 void timeout_routine(){
 	isTimerStarted = false;
-	retransmission(SendBase-1, "TIMEOUT EXPIRED    ");
+	retransmission(SendBase-1, "TIMEOUT EXPIRED");
 	return;
 }
 
@@ -225,9 +225,6 @@ void update_timeout(packet to_pkt) {
 
 // Ritrasmette immediatamente il pacchetto passato come parametro
 void retransmission(int rtx_ind, char *message){
-	if (!fileTransfer){
-		return;
-	}
 	send_packet(rtx_ind);
 	set_timer(timeoutInterval);
 	isTimerStarted = true;
