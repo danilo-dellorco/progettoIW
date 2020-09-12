@@ -32,7 +32,7 @@ int main(int argc, char **argv){
     FILE *fptr;
 	pid_t pid;
     int fd;
-    int control, num_files;
+    int control, num_files, num_client = 0;
 	char *list_files[MAX_FILE_LIST];
     
     clearScreen(); 
@@ -44,7 +44,8 @@ int main(int argc, char **argv){
         // Eseguo la fork del server per ogni nuova connessione da parte di un client
         if (server_reliable_conn(server_sock, &client_address) == 0){
         pid = fork();
-        
+       // int port = htons (client_address.sin_port);
+       num_client++;
         if (pid < 0){
             printf("> SERVER: fork error\n");
             exit(-1);
@@ -61,7 +62,7 @@ int main(int argc, char **argv){
 
 request:    
             // Server in attesa di un messaggio di richiesta dal client
-            printf("\n\n> Server waiting for request....\n");
+            printf("\n\n> Server waiting for request from client: %d\n", num_client);
             memset(buff, 0, sizeof(buff));
 
             if (recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len) < 0){
@@ -202,6 +203,7 @@ request:
                 free(buff);
                 free(path);
                 close(child_sock);
+                //num_client--;
                 return 0;
 
 //**************************************************************************************************************************************
