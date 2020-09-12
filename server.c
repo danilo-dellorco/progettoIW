@@ -132,7 +132,7 @@ int main(int argc, char **argv){
                     
                         // Comunico al client che il file non è presente
                         printf("SERVER: file not found\n");
-                        if (sendto(server_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
+                        if (sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
                             printf("SERVER: error sendto\n");
                             goto request;
                         }
@@ -144,7 +144,7 @@ int main(int argc, char **argv){
                     }
 
                     // Comunico al client che il file è presente e può essere scaricato
-                    if (sendto(server_sock, FOUND, strlen(FOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
+                    if (sendto(child_sock, FOUND, strlen(FOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
                         printf("SERVER: error sendto\n");
                         return 1;
                     }
@@ -168,18 +168,19 @@ int main(int argc, char **argv){
                         return 1;
                     }
                     snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff);
+                    memset(buff, 0, sizeof(buff));
 
                     // Il file è già presente nel server, invia al client NOVERW per annullare l'upload.
                     fd = open(path, O_RDONLY);
                     if(fd>0){
                         printf("%s SERVER: The file already exists, you can not overwrite files on server.\n", time_stamp());
-                        sendto(server_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&client_address, addr_len);
+                        sendto(child_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&client_address, addr_len);
                         close(fd);
                         goto request;
                     }
 
                     // Il file non è presente nel server, invia al client NFOUND per confermare di poter caricare il file
-                    sendto(server_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
+                    sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
                     close(fd);
                     fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
                     printf ("Receiving %s\n",path);

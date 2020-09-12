@@ -190,6 +190,7 @@ menu:
 			// Il client resta in attesa di conferma dal server prima di caricare il file
 			printf ("%s CLIENT: Attesa permesso upload\n", time_stamp());
 			control = recvfrom(client_sock, buff, strlen(NOVERW), 0, (struct sockaddr *)&server_address, &addr_len);
+			printf ("Ricevuto comando %s\n",buff);
 
 			// Se ricevo NOVERW il file che voglio caricare è già presente sul server. Viene annullato l'upload.
 			if (strcmp(buff,NOVERW) == 0){
