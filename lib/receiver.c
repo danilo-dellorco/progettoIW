@@ -47,6 +47,7 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 
 	printf("=========================================\n\n");
 	printf("> File transfer started\n> Wait...\n");
+	printf("Address %d\n",client_addr->sin_port);
 
 	while(tot_received != tot_pkts){							
 		memset(&new_pkt, 0, sizeof(packet));
@@ -159,9 +160,8 @@ void clear_junk(int sock, struct sockaddr* addr){
 	tv.tv_usec = 500000;
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 	while (recvfrom(sock, &new_pkt, PKT_SIZE, 0, addr, &addr_len)>=0){
-		printf ("scartato pacchetto\n");
+		// Scarto pacchetti dovuti a precedenti ritrasmissioni
 	}
-	printf ("terminata pulizia\n");
 	tv.tv_usec = 0;
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 }

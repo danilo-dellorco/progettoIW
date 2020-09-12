@@ -14,7 +14,7 @@
 #include "utility.h"
 #include "comm.h"
 
-int create_socket(int timeout) {
+int create_socket() {
 	
 	struct sockaddr_in new_addr;
 	int sockfd;
@@ -35,19 +35,7 @@ int create_socket(int timeout) {
 		printf("SERVER: socket bind error\n");
 		exit(-1);
 	}
-	//set_timeout_sec(sockfd, timeout);
 	return sockfd;
-}
-
-void set_timeout_sec(int sockfd, int timeout) {
-	//Imposta il timeout della socket in secondi
-	struct timeval time;
-	time.tv_sec = timeout;
-	time.tv_usec = 0;
-	if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&time, sizeof(time)) < 0) {
-		printf("setsockopt set_timeout");
-		exit(-1);
-	}
 }
 
 void set_timeout(int sockfd, int timeout) {
@@ -56,7 +44,7 @@ void set_timeout(int sockfd, int timeout) {
 	time.tv_sec = 0;
 	time.tv_usec = timeout;
 	if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&time, sizeof(time)) < 0) {
-		printf("setsockopt set_timeout");
+		perror("setsockopt error");
 		exit(-1);
 	}
 }

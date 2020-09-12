@@ -105,13 +105,13 @@ void *receive_ack(void *arg){
 
 		// Ricevuto ACK non duplicato
 		if (ack_num>SendBase){
-			old_acked = tot_acked;
+			//old_acked = tot_acked;
 			SendBase = ack_num;
 			WindowEnd = MIN(tot_pkts,SendBase+TRAN_WIN-1);
 			duplicate_ack_count = 1;
 			cumulative_ack(ack_num);
 			update_timeout(pkt[ack_num-2]);
-			print_percentage(tot_acked,tot_pkts,old_acked);
+			//print_percentage(tot_acked,tot_pkts,old_acked);
 			if (tot_acked == tot_pkts){
 				fileTransfer = false; //Stoppa il thread e l'invio dei pacchetti se arrivati alla fine del file
 				set_timer(0);
@@ -254,6 +254,7 @@ void end_transmission(){
 
 int send_packet(int index){
 	set_packet_sent(index);
+	printf ("Inviato pkt %d\n",pkt[index].seq_num);
 	if (is_packet_lost(LOST_PROB)){
 		set_packet_sent(index);
 		num_packet_lost++;
