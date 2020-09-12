@@ -44,8 +44,10 @@ int main(int argc, char **argv){
         // Eseguo la fork del server per ogni nuova connessione da parte di un client
         if (server_reliable_conn(server_sock, &client_address) == 0){
         pid = fork();
-       // int port = htons (client_address.sin_port);
-       num_client++;
+        char *ip = inet_ntoa(client_address.sin_addr);
+        int port = htons (client_address.sin_port);
+        num_client++;
+
         if (pid < 0){
             printf("> SERVER: fork error\n");
             exit(-1);
@@ -62,7 +64,7 @@ int main(int argc, char **argv){
 
 request:    
             // Server in attesa di un messaggio di richiesta dal client
-            printf("\n\n> Server waiting for request from client: %d\n", num_client);
+            printf("\n\n> Server waiting for request from %s:%d\n", ip, port);
             memset(buff, 0, sizeof(buff));
 
             if (recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len) < 0){
