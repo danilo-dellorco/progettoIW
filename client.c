@@ -31,20 +31,28 @@ int main (int argc, char** argv) {
 	char *buff = calloc(PKT_SIZE, sizeof(char));
 	char *path = calloc(PKT_SIZE, sizeof(char));
 	socklen_t addr_len = sizeof(server_address);
-	int fd;
+	int fd, clientNum;
 	off_t end_file, file_control;
 	char *list_files[MAX_FILE_LIST];
+	ready_pkt new_ready_pkt;
 
 	clearScreen();
 	client_setup_conn(&client_sock , &server_address);
 	client_reliable_conn(client_sock, &server_address);
-  	memset(buff, 0, sizeof(buff));
+  	memset(&new_ready_pkt, 0, sizeof(ready_pkt));
 	
-	control = recvfrom(client_sock, buff, strlen(READY), 0, (struct sockaddr *)&server_address, &addr_len);
+	int numero = 0;
+	control = recvfrom(client_sock, &numero, sizeof(int), 0, (struct sockaddr *)&server_address, &addr_len);
+	printf("%d\n", numero);
+		  
+//	printf("%s %d\n", new_ready_pkt.message, new_ready_pkt.clientNum);
+
 	if (control < 0) {
 		printf("CLIENT: server dispatching failed\n");
 		exit(-1);
 	}
+	//clientNum = new_ready_pkt.clientNum;
+	//printf("clientNum %d", clientNum);
 
 menu:
 	printf("\n\n________________________ COMMAND LIST ________________________\n\n");

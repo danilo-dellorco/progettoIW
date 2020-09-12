@@ -60,3 +60,9 @@ typedef struct packet{
 	int num_pkts;											//Indica il numero totale dei pacchetti del file
 	uint64_t sent_time; 									//Tempo di invio del pkt in microsecondi
 } packet;
+
+typedef struct ready_pkt
+    {
+        char *message;
+        int clientNum;
+    }ready_pkt;

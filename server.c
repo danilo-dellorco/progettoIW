@@ -32,8 +32,9 @@ int main(int argc, char **argv){
     FILE *fptr;
 	pid_t pid;
     int fd;
-    int control, num_files, num_client = 0;
+    int control, num_files, num_client=0;
 	char *list_files[MAX_FILE_LIST];
+    ready_pkt send_ready_pkt;
     
     clearScreen(); 
     server_setup_conn(&server_sock, &server_address);
@@ -47,7 +48,6 @@ int main(int argc, char **argv){
         char *ip = inet_ntoa(client_address.sin_addr);
         int port = htons (client_address.sin_port);
         num_client++;
-
         if (pid < 0){
             printf("> SERVER: fork error\n");
             exit(-1);
@@ -55,8 +55,10 @@ int main(int argc, char **argv){
         if (pid == 0){
             pid = getpid();
             child_sock = create_socket();
-
-            control = sendto(child_sock, READY, strlen(READY), 0, (struct sockaddr *)&client_address, addr_len);
+            send_ready_pkt.clientNum = num_client;
+            send_ready_pkt.message = READY;
+            printf("%s %d\n", send_ready_pkt.message, send_ready_pkt.clientNum);
+            control = sendto(child_sock, &send_ready_pkt.clientNum,sizeof(int) ,0, (struct sockaddr *)&client_address, addr_len);
             if (control < 0) {
                 printf("> SERVER %d: port comunication failed\n", pid);
             }
@@ -205,7 +207,6 @@ request:
                 free(buff);
                 free(path);
                 close(child_sock);
-                //num_client--;
                 return 0;
 
 //**************************************************************************************************************************************
