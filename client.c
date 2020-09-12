@@ -34,25 +34,26 @@ int main (int argc, char** argv) {
 	int fd, clientNum;
 	off_t end_file, file_control;
 	char *list_files[MAX_FILE_LIST];
-	ready_pkt new_ready_pkt;
+	ready_pkt recv_ready_pkt;
 
 	clearScreen();
 	client_setup_conn(&client_sock , &server_address);
 	client_reliable_conn(client_sock, &server_address);
-  	memset(&new_ready_pkt, 0, sizeof(ready_pkt));
+  	memset(&recv_ready_pkt, 0, sizeof(ready_pkt));
 	
-	int numero = 0;
-	control = recvfrom(client_sock, &numero, sizeof(int), 0, (struct sockaddr *)&server_address, &addr_len);
-	printf("%d\n", numero);
-		  
-//	printf("%s %d\n", new_ready_pkt.message, new_ready_pkt.clientNum);
+	
+	control = recvfrom(client_sock, &recv_ready_pkt, sizeof(ready_pkt), 0, (struct sockaddr *)&server_address, &addr_len);
 
-	if (control < 0) {
+	clientNum = recv_ready_pkt.clientNum;  
+	printf("clientNum: %d\n", clientNum);
+	printf("message  : %s\n",recv_ready_pkt.message);
+
+	if (control < 0 || strcmp(READY,recv_ready_pkt.message) != 0) {
 		printf("CLIENT: server dispatching failed\n");
 		exit(-1);
 	}
-	//clientNum = new_ready_pkt.clientNum;
-	//printf("clientNum %d", clientNum);
+	
+	
 
 menu:
 	printf("\n\n________________________ COMMAND LIST ________________________\n\n");

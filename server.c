@@ -56,12 +56,13 @@ int main(int argc, char **argv){
             pid = getpid();
             child_sock = create_socket();
             send_ready_pkt.clientNum = num_client;
-            send_ready_pkt.message = READY;
+            snprintf(send_ready_pkt.message,6,"%s",READY);
             printf("%s %d\n", send_ready_pkt.message, send_ready_pkt.clientNum);
-            control = sendto(child_sock, &send_ready_pkt.clientNum,sizeof(int) ,0, (struct sockaddr *)&client_address, addr_len);
+            control = sendto(child_sock, &send_ready_pkt, sizeof(send_ready_pkt),0, (struct sockaddr *)&client_address, addr_len);
             if (control < 0) {
                 printf("> SERVER %d: port comunication failed\n", pid);
             }
+            printf ("Inviato ready pkt\n");
 
 
 request:    

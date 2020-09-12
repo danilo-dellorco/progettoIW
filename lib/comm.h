@@ -61,8 +61,7 @@ typedef struct packet{
 	uint64_t sent_time; 									//Tempo di invio del pkt in microsecondi
 } packet;
 
-typedef struct ready_pkt
-    {
-        char *message;
-        int clientNum;
-    }ready_pkt;
+typedef struct ready_pkt{
+    char message[5];
+    int clientNum;
+}ready_pkt;
