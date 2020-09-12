@@ -56,7 +56,7 @@ int main (int argc, char** argv) {
 	
 
 menu:
-	printf("\n\n________________________ COMMAND LIST ________________________\n\n");
+	printf("\n\n________________________ COMMAND LIST | CLIENT %d ________________________\n\n", clientNum);
 	printf("1) List available files on the server\n");
 	printf("2) Download a file from the server\n");
 	printf("3) Upload a file to the server\n");
@@ -70,7 +70,7 @@ menu:
 //****************************************************************************************************************************************
     	case LIST:
 			printf("==============================================================\n");
-			printf("\t\t\t LIST REQUEST\n");
+			printf("\t\t\t LIST REQUEST | CLIENT %d\n", clientNum);
 			printf("==============================================================\n");
 
 
@@ -102,7 +102,7 @@ menu:
 //****************************************************************************************************************************************
 		case GET:
 			printf("==============================================================\n");
-			printf("\t\t\t  GET REQUEST\n");
+			printf("\t\t\t  GET REQUEST | CLIENT %d\n", clientNum);
 			printf("==============================================================\n");
 
 
@@ -131,6 +131,7 @@ menu:
 				else {
 					// Invia al server un pacchetto NOVERW per comunicare l'annullamento del download
 					sendto(client_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&server_address, addr_len);
+					clearScreen();
 					goto menu;
 				}
 				remove(aux);
@@ -170,7 +171,7 @@ menu:
 //****************************************************************************************************************************************
 		case PUT:
 			printf("==============================================================\n");
-			printf("\t\t\t  PUT REQUEST\n");
+			printf("\t\t\t  PUT REQUEST | CLIENT %d\n", clientNum);
 			printf("==============================================================\n");
 
 

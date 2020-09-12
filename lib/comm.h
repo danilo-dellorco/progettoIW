@@ -24,7 +24,7 @@
 #define CLOSE 	4
 
 // PARAMETRI SULLA TRASMISSIONE
-#define LOST_PROB 	25				// Probabilità di perdita sul pacchetto -> LOST PROB ∈ [0,100]
+#define LOST_PROB 	10				// Probabilità di perdita sul pacchetto -> LOST PROB ∈ [0,100]
 #define TRAN_WIN 	16				// Dimensione della finestra di trasmissione
 #define RECV_WIN	16				// Dimensione della finestra di ricezione
 #define PKT_SIZE 	1500			// Dimensione del pacchetto
