@@ -5,15 +5,17 @@
 #define SERVER_IP "127.0.0.1"
 
 // DEFINIZIONE DEI MESSAGGI DEI PACCHETTI
+#define ACK "ack"
 #define SYN "syn"
 #define SYNACK "synack"
-#define ACK_SYNACK "ack_synack"
+#define READY "ready"
 #define FIN "fin"
 #define FINACK "ackfin"
 #define FOUND "found"
 #define NFOUND "notfound"
 #define NOVERW "nooverwr"
-#define READY "ready"
+#define CORRUP "corruptd"
+
 
 // DEFINIZIONE DEI COMANDI
 #define LIST 1
@@ -22,11 +24,12 @@
 #define CLOSE 4
 
 // PARAMETRI SULLA TRASMISSIONE
-#define LOST_PROB 10			// 0%<=LOST_PROB<=100%
+#define LOST_PROB 5			// 0%<=LOST_PROB<=100%
 #define TRAN_WIN 32				// Dimensione della finestra di trasmissione
 #define RECV_WIN 32			// Dimensione della finestra di ricezione
 #define PKT_SIZE 1500			// Dimensione del pacchetto
 #define MAX_RTO 300000			// Valore massimo del timeout di ritrasmissione in microsecondi
+#define MIN_RTO 100
 
 
 // PARAMETRI SULLE CARTELLE CLIENT/SERVER
@@ -42,6 +45,10 @@
 // COSTANTI PER IL CALCOLO DEL TIMEOUT
 #define ALPHA 0.125
 #define BETA  0.250
+
+// ALTRE COSTANTI
+#define CLIENT "client"
+#define SERVER "server"
 
 
 // DEFINIZIONE DELLA STRUTTURA DI UN PACCHETTO

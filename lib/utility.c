@@ -63,7 +63,6 @@ void clearScreen(){
 // Genera un numero casuale e ritorna true o false in base alla probabilita di perdita passata in input
 bool is_packet_lost(int prob){
   int random = rand() %100;
- // printf ("Random Number: %d\n",random);
   if (random<prob){
 	  return true;
   }
@@ -89,8 +88,12 @@ char *time_stamp(){
 // Imposta il timer di ritrasmissione
 void set_timer(int micro){
     struct itimerval it_val;
+
 	if (micro >= MAX_RTO){
 		micro = MAX_RTO;
+	}
+	if (micro <= MIN_RTO && micro != 0){
+		micro = MIN_RTO;
 	}
 	it_val.it_value.tv_sec = 0;
 	it_val.it_value.tv_usec = micro;
@@ -103,7 +106,11 @@ void set_timer(int micro){
 }
 
 // Stampa una barra di avanzamento relativo all'invio del file
-void print_percentage(int part, int total, int oldPart){
+void print_percentage(int part, int total, int oldPart, char* subject){
+	if (strcmp(subject,CLIENT) != 0){
+		return;
+	}
+
 	float percentage = (float) part/total*100;
 	float oldPercentage = (float) oldPart/total*100;
 
@@ -119,6 +126,5 @@ void print_percentage(int part, int total, int oldPart){
 		printf("-");
 	}
 	printf ("|");
-	printf (" %.2f%% complete\n",percentage);
+	printf (" %.2f%%\n",percentage);
 }
-

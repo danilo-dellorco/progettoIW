@@ -36,18 +36,16 @@ void clear_junk(int sock, struct sockaddr* addr );
 
 
 // Gestisce la ricezioni di pacchetti secondo il protocollo TCP
-int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
+int tcp_receiver(int socket, struct sockaddr_in *sender_addr, int fd, char* subject){
 	int num_packet_disorder = 0;	// Conta il numero di pacchetti ricevuti non in ordine
 	int num_packet_discarded = 0;	// Conta il numero di pacchetti scartati perchè fuori dalla finestra di trasmissione
-	srand (time(NULL)); // Randomizza la scelta dei numeri per la simulazione della perdita dei pacchetti
+	srand (time(NULL)); 			// Randomizza la scelta dei numeri per la simulazione della perdita dei pacchetti
 	initialize_recv();
 	socklen_t addr_len=sizeof(struct sockaddr_in);
 	client_addr = sender_addr;
 	long i = 0;
 
-	printf("=========================================\n\n");
 	printf("> File transfer started\n> Wait...\n");
-	printf("Address %d\n",client_addr->sin_port);
 
 	while(tot_received != tot_pkts){							
 		memset(&new_pkt, 0, sizeof(packet));
@@ -55,6 +53,11 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 		if((recvfrom(socket, &new_pkt, PKT_SIZE, 0, (struct sockaddr *)sender_addr, &addr_len)<0)) {
 			perror("error receive pkt ");
 			continue;
+		}
+
+		if (new_pkt.seq_num == -1) {
+			printf ("> Corrupted file. Abort receiving\n");
+			exit (-1);
 		}
 
 		// Alloca le risorse per i pacchetti in ricezione e per l'array di interi che tiene traccia dei pacchetti ricevuti
@@ -70,7 +73,7 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 		// Arrivo di un nuovo pacchetto non in ordine
 		if (ReceiveBase < new_pkt.seq_num && new_pkt.seq_num <= WindowEnd && !is_received(new_pkt.seq_num)){
 			mark_recvd(new_pkt.seq_num);
-			print_percentage(tot_received,tot_pkts,tot_received-1);
+			print_percentage(tot_received,tot_pkts,tot_received-1,subject);
 			memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
 			pkt[new_pkt.seq_num-1] = new_pkt;
 			num_packet_disorder++;
@@ -79,7 +82,7 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 		// Arrivo ordinato di segmento con numero di sequenza atteso
 		else if (new_pkt.seq_num == ReceiveBase){
 			mark_recvd(new_pkt.seq_num);
-			print_percentage(tot_received,tot_pkts,tot_received-1);
+			print_percentage(tot_received,tot_pkts,tot_received-1,subject);
 			move_window();
 			memset(pkt+new_pkt.seq_num-1, 0, sizeof(packet));
 			pkt[new_pkt.seq_num-1] = new_pkt;
@@ -93,7 +96,7 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 
 	}
 	// Ricevuti tutti i pacchetti termino la trasmissione
-	printf("\n\n================ Transmission end =================\n");
+	printf("\n_____________________ Transmission end _______________________\n\n");
 	printf ("File transfer finished\n");
 	printf("Packets Received: %d\nPackets not ordered: %d\nPackets discarded: %d\n", tot_pkts,num_packet_disorder, num_packet_discarded);
 
@@ -101,8 +104,9 @@ int receiver(int socket, struct sockaddr_in *sender_addr, int fd){
 	for(i=0; i<tot_pkts; i++){
 		write(fd, pkt[i].data, pkt[i].pkt_dim);
 	}
-	printf("===================================================\n");
+	printf("______________________________________________________________\n");
 	clear_junk(socket,(struct sockaddr *)sender_addr);
+	return 0;
 }
 
 // Invia un ACK cumulativo al mittente
@@ -165,5 +169,3 @@ void clear_junk(int sock, struct sockaddr* addr){
 	tv.tv_usec = 0;
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 }
-
-

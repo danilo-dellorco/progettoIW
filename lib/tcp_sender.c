@@ -36,6 +36,7 @@ int tot_acked;		// Contatore del numero totale di pacchetti che sono stati risco
 int tot_pkts;		// Numero dei pacchetti da inviare
 int num_packet_lost;
 int sock;
+char* subj;
 
 
 bool fileTransfer = true;						// Termina l'invio dei pacchetti quando posto a false
@@ -85,6 +86,7 @@ void initialize_send(){
 	estimatedRTT = 1000;
 	devRTT = 1;
 	num_packet_lost = 0;
+	subj = NULL;
 }
 
 // Thread che gestisce la ricezione degli ack da parte del ricevente, compresi gli ack duplicati
@@ -105,13 +107,13 @@ void *receive_ack(void *arg){
 
 		// Ricevuto ACK non duplicato
 		if (ack_num>SendBase){
-			//old_acked = tot_acked;
+			old_acked = tot_acked;
 			SendBase = ack_num;
 			WindowEnd = MIN(tot_pkts,SendBase+TRAN_WIN-1);
 			duplicate_ack_count = 1;
 			cumulative_ack(ack_num);
 			update_timeout(pkt[ack_num-2]);
-			//print_percentage(tot_acked,tot_pkts,old_acked);
+			print_percentage(tot_acked,tot_pkts,old_acked,subj);
 			if (tot_acked == tot_pkts){
 				fileTransfer = false; //Stoppa il thread e l'invio dei pacchetti se arrivati alla fine del file
 				set_timer(0);
@@ -131,12 +133,14 @@ void *receive_ack(void *arg){
 }
 
 
-void sender(int socket, struct sockaddr_in *receiver_addr, int fd) {
-	sock = socket;
+void tcp_sender(int socket, struct sockaddr_in *receiver_addr, int fd, char* subject) {
 	initialize_send();
+	sock = socket;
+	subj = subject;
 	client_addr = receiver_addr;
 	addr_len = sizeof(struct sockaddr_in);
 	char *buff = calloc(PKT_SIZE, sizeof(char));
+	signal(SIGALRM, timeout_routine);
 	int i;
 
 	struct thread_args t_args;
@@ -149,6 +153,13 @@ void sender(int socket, struct sockaddr_in *receiver_addr, int fd) {
 	
 	// Calcolo del numero totale di pacchetti da inviare
 	file_dim = lseek(fd, 0, SEEK_END);
+	if (file_dim == 0){
+		printf ("> Corrupted file. Abort sending\n");
+		packet corrupt_pkt;
+		corrupt_pkt.seq_num = -1;
+		sendto(sock, &corrupt_pkt, strlen(CORRUP), 0, (struct sockaddr *)client_addr, addr_len);
+		exit(-1);
+	}
 	int pkt_data_size = PKT_SIZE-2*sizeof(int)-sizeof(short int);
 	if (file_dim%pkt_data_size==0) {
 		tot_pkts = file_dim/pkt_data_size;
@@ -157,7 +168,7 @@ void sender(int socket, struct sockaddr_in *receiver_addr, int fd) {
 		tot_pkts = (file_dim/pkt_data_size)+1;
 	}
 
-	printf("\n====== INIZIO TRASMISSIONE PACCHETTI | PKTS: %d ======\n\n",tot_pkts);
+	printf("> File transfer started | Sending %d packets\n\n",tot_pkts);
 	pkt=calloc(tot_pkts, sizeof(packet));
 	check_pkt=calloc(tot_pkts, sizeof(int));
 	lseek(fd, 0, SEEK_SET);
@@ -183,26 +194,27 @@ void sender(int socket, struct sockaddr_in *receiver_addr, int fd) {
 //Invia tutti i pacchetti nella finestra
 void send_window(int socket, struct sockaddr_in *client_addr, packet *pkt){
 	WindowEnd = MIN(tot_pkts,SendBase+TRAN_WIN-1);
-	signal(SIGALRM, timeout_routine);
 	int i, j;
 	socklen_t addr_len = sizeof(struct sockaddr_in);
 
 	// Caso in cui la finestra non è ancora piena di pkt in volo	
 	for(i=NextSeqNum-1; i<WindowEnd; i++){
+		//printf ("Inviato pkt %d\n",pkt[i].seq_num);
 		WindowEnd = MIN(tot_pkts,SendBase+TRAN_WIN-1);
-
-		if (!isTimerStarted){
-			set_timer(timeoutInterval);
-			isTimerStarted = true;
-		}
 		send_packet(i);
 		NextSeqNum++;
+		
+		if (!isTimerStarted){
+			isTimerStarted = true;
+			set_timer(timeoutInterval);
+		}
 	}
 }
 
 void timeout_routine(){
+	int rtx_seq = SendBase;
 	isTimerStarted = false;
-	retransmission(SendBase-1, "TIMEOUT EXPIRED");
+	retransmission(rtx_seq-1, "TIMEOUT RETRANSMISSION");
 	return;
 }
 
@@ -225,9 +237,10 @@ void update_timeout(packet to_pkt) {
 
 // Ritrasmette immediatamente il pacchetto passato come parametro
 void retransmission(int rtx_ind, char *message){
+	//printf ("%s | rtx pkt %d\n",message,pkt[rtx_ind].seq_num);
 	send_packet(rtx_ind);
-	set_timer(timeoutInterval);
 	isTimerStarted = true;
+	set_timer(timeoutInterval);
 }
 
 // Imposta come acked tutti i pacchetti con numero di sequenza inferiore a quello ricevuto
@@ -240,7 +253,7 @@ void cumulative_ack(int received_ack){
 
 // Stoppa il timer e stampa il tempo impiegato per l'invio del file
 void end_transmission(){
-	printf("\n\n================ Transmission end =================\n");
+	printf("\n_____________________ Transmission end _______________________\n\n");
 	set_timer(0);
 	printf("File transfer finished\n");
 	gettimeofday(&transferEnd, NULL);
@@ -249,12 +262,11 @@ void end_transmission(){
 	printf("Transfer time: %f sec [%f KB/s]\n", tm, tp/1024);
 	printf("Packets total: %d\n",tot_pkts);
 	printf("Packets lost : %d\n", num_packet_lost);
-	printf("===================================================\n");
+	printf("______________________________________________________________\n");
 }
 
 int send_packet(int index){
 	set_packet_sent(index);
-	printf ("Inviato pkt %d\n",pkt[index].seq_num);
 	if (is_packet_lost(LOST_PROB)){
 		set_packet_sent(index);
 		num_packet_lost++;
@@ -266,4 +278,3 @@ int send_packet(int index){
 	}
 	return 1;
 }
-
