@@ -36,10 +36,9 @@ void clear_junk(int sock, struct sockaddr* addr );
 
 
 // Gestisce la ricezioni di pacchetti secondo il protocollo TCP
-int tcp_receiver(int socket, struct sockaddr_in *sender_addr, int fd, char* subject){
+void tcp_receiver(int socket, struct sockaddr_in *sender_addr, int fd, char* subject){
 	int num_packet_disorder = 0;	// Conta il numero di pacchetti ricevuti non in ordine
 	int num_packet_discarded = 0;	// Conta il numero di pacchetti scartati perchè fuori dalla finestra di trasmissione
-	srand (time(NULL)); 			// Randomizza la scelta dei numeri per la simulazione della perdita dei pacchetti
 	initialize_recv();
 	socklen_t addr_len=sizeof(struct sockaddr_in);
 	client_addr = sender_addr;
@@ -106,16 +105,15 @@ int tcp_receiver(int socket, struct sockaddr_in *sender_addr, int fd, char* subj
 	}
 	printf("______________________________________________________________\n");
 	clear_junk(socket,(struct sockaddr *)sender_addr);
-	return 0;
 }
 
 // Invia un ACK cumulativo al mittente
 void send_cumulative_ack(int ack_number, int sock){
+	//printf ("%s INVIO ACK: %d\n",time_stamp(),ack_number);
 	if(sendto(sock, &ack_number, sizeof(int), 0, (struct sockaddr *)client_addr, addr_len) < 0) {
 		perror("Error send ack\n");
 		return;
 	}
-	//printf ("%s INVIO ACK: %d\n",time_stamp(),ack_number);
 }
 
 // Segna come ricevuto il pacchetto con il numero di sequenza passato come parametro e aumenta il contatore del totale di pacchetti ricevuti
@@ -159,13 +157,9 @@ void initialize_recv(){
 
 
 void clear_junk(int sock, struct sockaddr* addr){
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 500000;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	set_socket_timeout(sock,CLEAN_TIME);
 	while (recvfrom(sock, &new_pkt, PKT_SIZE, 0, addr, &addr_len)>=0){
 		// Scarto pacchetti dovuti a precedenti ritrasmissioni
 	}
-	tv.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	set_socket_timeout(sock,0);
 }

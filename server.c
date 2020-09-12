@@ -40,13 +40,14 @@ int main(int argc, char **argv){
     printf ("%s SERVER: Waiting for client connections\n",time_stamp());
 
     while (1) {
-        set_timeout(server_sock, 0);//recvfrom all'inizio è bloccante (si fa con timeout==0)
-        if (server_reliable_conn(server_sock, &client_address) == 0){ //se un client non riesce a ben connettersi, il server non forka
+
+        // Eseguo la fork del server per ogni nuova connessione da parte di un client
+        if (server_reliable_conn(server_sock, &client_address) == 0){
         pid = fork();
         
         if (pid < 0){
             printf("> SERVER: fork error\n");
-            // exit o return
+            exit(-1);
         }
         if (pid == 0){
             pid = getpid();
@@ -58,7 +59,8 @@ int main(int argc, char **argv){
             }
 
 
-request:
+request:    
+            // Server in attesa di un messaggio di richiesta dal client
             printf("\n\n> Server waiting for request....\n");
             memset(buff, 0, sizeof(buff));
 
@@ -72,7 +74,6 @@ request:
 
 
             switch (*(int*) buff ){
-
  //****************************************************************************************************************************************
             case LIST:
                 printf("> LIST request\n");
@@ -85,6 +86,7 @@ request:
                     return 1;
                 }
 
+
                 // Scrivo tutti i file in serverFiles nel file che verrà inviato al client
                 int i=0;
                 while(i<num_files) {
@@ -93,8 +95,8 @@ request:
                     write(fd, buff, strlen(buff));
                     i++;
                 }
-
                 read(fd, (void *)&buffToSend, strlen(buffToSend));
+
 
                 // Inizio l'invio del file
                 tcp_sender(child_sock, &client_address,fd,SERVER);
@@ -115,12 +117,13 @@ request:
                     return 1;
                 }
 
+
                 // +1 per lo /0 altrimenti lo sostituisce all' ultimo carattere
                 snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff); 
                 fd = open(path, O_RDONLY);
                 printf("> Sending %s\n",path);
-                if(fd == -1){
 
+                if(fd == -1){
                     // Il client ha rifiutato di sovrascrivere il file
                     if (strcmp(buff,NOVERW) == 0){
                         printf ("SERVER: Download canceled by client\n");
@@ -140,11 +143,13 @@ request:
                     return 1;
                 }
 
+
                 // Comunico al client che il file è presente e può essere scaricato
                 if (sendto(child_sock, FOUND, strlen(FOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
                     printf("> SERVER: error sendto\n");
                     return 1;
                 }
+
 
                 // Inizio l'invio del file
                 tcp_sender(child_sock, &client_address,fd,SERVER);          
@@ -154,6 +159,9 @@ request:
             case PUT:
                 printf("> UPLOAD request\n");
                 memset(buff, 0, sizeof(buff));
+
+
+                // In attesa di ricevere il nome del file 
                 control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len);
                 if (control < 0) {
                     printf("%s SERVER: file transfer failed (1)\n",time_stamp());
@@ -163,7 +171,8 @@ request:
                     return 1;
                 }
                 snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff);
-                printf ("> Receiving file: %s\n",path);
+                printf ("> Receiving file: %s\n",buff);
+
 
                 // Il file è già presente nel server, invia al client NOVERW per annullare l'upload.
                 fd = open(path, O_RDONLY);
@@ -174,22 +183,16 @@ request:
                     goto request;
                 }
 
+
                 // Il file non è presente nel server, invia al client NFOUND per confermare di poter caricare il file
                 sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
                 close(fd);
                 fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
 
+
                 // Inizio la ricezione del file
-                control=tcp_receiver(child_sock, &client_address,fd,SERVER);
-                if(control == -1) {
-                    printf ("recv error\n");
-                    close(fd);
-                    remove(path);
-                    free(buff);
-                    free(path);
-                    close(child_sock);
-                    return 1;
-                }
+                tcp_receiver(child_sock, &client_address,fd,SERVER);
+
                 close(fd);
                 break;
 
@@ -204,13 +207,13 @@ request:
 //**************************************************************************************************************************************
             default:
                 printf("Wrong request\n\n");
-                break;  
-        }
-                goto request;
-                }
+                break; 
+            }
+            goto request;
             }
         }
-        return 0;
+    }
+    return 0;
 }
 
 

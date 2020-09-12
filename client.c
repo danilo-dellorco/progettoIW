@@ -12,6 +12,7 @@
 #include "./lib/tcp_receiver.h"
 #include "./lib/tcp_sender.h"
 #include "./lib/utility.h"
+#define fflush(stdin) while ((getchar()) != '\n')
 
 void client_setup_conn (int*, struct sockaddr_in*);
 void client_reliable_conn (int, struct sockaddr_in*);
@@ -23,7 +24,7 @@ void* alarm_routine();
 
 
 int main (int argc, char** argv) {
-	int control, answer, bytes, num_files;
+	int control, answer, num_files;
 	int client_sock;
 	int list = LIST, get = GET, put = PUT, close_conn = CLOSE;
 	struct sockaddr_in server_address;
@@ -33,7 +34,7 @@ int main (int argc, char** argv) {
 	int fd;
 	off_t end_file, file_control;
 	char *list_files[MAX_FILE_LIST];
-	char buf[1200];
+
 	clearScreen();
 	client_setup_conn(&client_sock , &server_address);
 	client_reliable_conn(client_sock, &server_address);
@@ -62,6 +63,8 @@ menu:
 			printf("==============================================================\n");
 			printf("\t\t\t LIST REQUEST\n");
 			printf("==============================================================\n");
+
+
 			control = sendto(client_sock, (void*)&list, sizeof(int), 0, (struct sockaddr *)&server_address, addr_len);
 			if (control < 0) {
 				printf("CLIENT: request failed (sending)\n");
@@ -70,11 +73,7 @@ menu:
 			fd = open("clientFiles/file_list.txt", O_CREAT | O_TRUNC | O_RDWR, 0666); //Apro il file con la lista dei file del server
 			
 			// Inizio la ricezione del file
-			control = tcp_receiver(client_sock, &server_address,fd,CLIENT);
-			if(control == -1) {
-				close(fd);
-				remove("clientFiles/file_list.txt");
-			}
+			tcp_receiver(client_sock, &server_address,fd,CLIENT);
 			clearScreen();
 
 			// Lettura del file contenente la lista di file del server
@@ -96,6 +95,8 @@ menu:
 			printf("==============================================================\n");
 			printf("\t\t\t  GET REQUEST\n");
 			printf("==============================================================\n");
+
+
 			control = sendto(client_sock, (void *)&get, sizeof(int), 0, (struct sockaddr *)&server_address, addr_len);
 			if (control < 0) {
 				printf("CLIENT: request failed (sending)\n");
@@ -108,6 +109,7 @@ menu:
 			char *aux = calloc(PKT_SIZE, sizeof(char));
 			snprintf(aux, 12+strlen(buff)+1, "clientFiles/%s", buff);
 			fd = open(aux, O_RDONLY);
+
 
 			// Il file è già presente nella cartella del client. Viene chiesto all'utente se vuole sovrascriverlo o meno. 
 			if(fd>0){
@@ -126,6 +128,7 @@ menu:
 			}
 			close(fd);
 
+
 			// Invia al server il nome del file da scaricare
 			control = sendto(client_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&server_address, addr_len);
 			if (control < 0) {
@@ -135,10 +138,12 @@ menu:
 			snprintf(path, 12+strlen(buff)+1, "clientFiles/%s", buff);
 			fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
 
-			// Ricevo la risposta dal server se il è presente o meno.
+
+			// Ricevo la risposta dal server se il file è presente o meno.
 			if (recvfrom(client_sock, buff, strlen(NFOUND), 0, (struct sockaddr *)&server_address, &addr_len) < 0) {
 				printf("CLIENT: error recvfrom\n");
 			}
+
 
 			// Ricevo NFOUND, il file non è presente sul server
 			if (strncmp(buff, NFOUND, strlen(NFOUND)) == 0) {
@@ -149,12 +154,7 @@ menu:
 			}
 			
 			// Inizia la ricezione del file
-			control=tcp_receiver(client_sock, &server_address,fd,CLIENT);
-			if (control == -1) {
-				close(fd);
-				remove(path);
-				break;
-			}
+			tcp_receiver(client_sock, &server_address,fd,CLIENT);
 			close(fd);
 			break;
 
@@ -164,6 +164,7 @@ menu:
 			printf("\t\t\t  PUT REQUEST\n");
 			printf("==============================================================\n");
 
+
 			// Mostro a schermo la lista di file presenti nella cartella del client
 			printf("__________________ File available to upload __________________\n\n");
 			num_files = client_folder_files(list_files);
@@ -171,33 +172,39 @@ menu:
 			for (i = 0; i < num_files; i++) {
 				printf("%s\n", list_files[i]);	
 			}
+
+
+			// Chiedo il nome del file da caricare sul server
 			printf("______________________________________________________________\n\n");
 			printf("\n> Type the file name to upload: ");
-
 			memset(buff, 0, sizeof(buff));
 			scanf("%s", buff);
 			snprintf(path, 12+strlen(buff)+1, "clientFiles/%s", buff);
-
 			fd = open(path, O_RDONLY);
+
+
+			// Se il file non è presente nel client non inoltro la richiesta di PUT al server
 			if(fd == -1){
 				printf("> CLIENT: file not found\n");
 				goto menu;
 			}
 
+
+			// Invio la richiesta di PUT al server
 			control = sendto(client_sock, (void *)&put, sizeof(int), 0, (struct sockaddr *)&server_address, sizeof(server_address));
 			if (control < 0) {
 				printf("> CLIENT: request failed (sending)\n");
 				exit(-1);
 			}
 			
-			// Comunico al server il nome del client che voglio caricare
-			printf ("%s CLIENT: Invio nome file: %s\n", time_stamp(),buff);
+
+			// Comunico al server il nome del file che voglio caricare
+			printf ("%s CLIENT: Sending File: %s\n", time_stamp(),buff);
 			control = sendto(client_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&server_address, addr_len);
 			if (control < 0) {
 				printf("CLIENT: request failed (sending)\n");
 				exit(-1);
 			}
-
 			memset(buff, 0, sizeof(NOVERW));
 
 
@@ -205,12 +212,14 @@ menu:
 			printf ("%s CLIENT: Attesa permesso upload\n", time_stamp());
 			control = recvfrom(client_sock, buff, strlen(NOVERW), 0, (struct sockaddr *)&server_address, &addr_len);
 
+
 			// Se ricevo NOVERW il file che voglio caricare è già presente sul server. Viene annullato l'upload.
 			if (strcmp(buff,NOVERW) == 0){
 				printf ("%s CLIENT: File already exists on server, upload canceled\n", time_stamp());
 				break;
 			}
 			printf ("%s Upload authorization granted\n", time_stamp());
+
 
 			// Inizio l'invio del file
 			tcp_sender(client_sock, &server_address,fd,CLIENT);
@@ -225,6 +234,12 @@ menu:
 		}
 		client_reliable_close(client_sock, &server_address);
 		return 0;
+
+//**************************************************************************************************************************************
+	default: 
+		printf ("Wrong request\n");
+		fflush(stdin);
+		break;
   	}
   goto menu;
 }
@@ -257,6 +272,7 @@ void client_reliable_conn (int client_sock, struct sockaddr_in *server_addr) {
 	char *buff = calloc(PKT_SIZE, sizeof(char));
 	socklen_t addr_len = sizeof(*server_addr);
 
+
 	// Invio del SYN
 	printf("\n===================== CONNECTION SETUP =======================\n");
     printf("%s CLIENT: sending SYN\n", time_stamp());
@@ -265,6 +281,7 @@ void client_reliable_conn (int client_sock, struct sockaddr_in *server_addr) {
 		printf("CLIENT: connection failed (sending SYN)\n");
 		exit(-1);
 	}
+
 
 	// In attesa del SYNACK
   	printf("%s CLIENT: waiting SYNACK\n", time_stamp());
@@ -275,6 +292,7 @@ void client_reliable_conn (int client_sock, struct sockaddr_in *server_addr) {
 		exit(-1);
 	}
 
+
 	// Invio del ACK
     printf("%s CLIENT: sending ACK\n", time_stamp());
 	control = sendto(client_sock, ACK, strlen(ACK), 0, (struct sockaddr *)server_addr, addr_len);
@@ -282,6 +300,7 @@ void client_reliable_conn (int client_sock, struct sockaddr_in *server_addr) {
 		printf("CLIENT: connection failed (sending ACK)\n");
 		exit(-1);
 	}
+
 
 	// Connessione stabilita
 	printf("%s CLIENT: connection established\n", time_stamp());
@@ -294,15 +313,15 @@ void client_reliable_close (int client_sock, struct sockaddr_in *server_addr) {
 	int control;
 	char *buff = calloc(PKT_SIZE, sizeof(char));
 	socklen_t addr_len = sizeof(*server_addr);
-
-	printf("\n===================== CONNECTION CLOSE =======================\n");
+	
 	// Invio del FIN
+	printf("\n===================== CONNECTION CLOSE =======================\n");
 	printf("%s CLIENT: invio FIN\n", time_stamp());
 	control = sendto(client_sock, FIN, strlen(FIN), 0, (struct sockaddr *)server_addr, addr_len);
 	if (control < 0) {
 		printf("CLIENT: close failed (sending FIN)\n");
 		exit(-1);
-	}
+	}//Se un client non riesce a ben connettersi, il server non forka
 
 
 	// In attesa del FINACK
@@ -324,6 +343,7 @@ void client_reliable_close (int client_sock, struct sockaddr_in *server_addr) {
 	}
 	printf("%s CLIENT: ricevuto FIN\n", time_stamp());
 	
+
 	// Invio del FINACK
 	printf("%s CLIENT: invio FINACK\n", time_stamp());
 	control = sendto(client_sock, FINACK, strlen(FINACK), 0, (struct sockaddr *)server_addr, addr_len);
@@ -332,15 +352,12 @@ void client_reliable_close (int client_sock, struct sockaddr_in *server_addr) {
 		exit(-1);
 	}		
 	
+
 	// Connessione chiusa
 	printf("CLIENT: connection closed\n");
 	printf("==============================================================\n\n");
 }
 
-void* alarm_routine(){
-	printf("Connection closed with error: timeout expired\n");
-    exit(-1);
-}
 
 /*Apre la cartella e prende tutti i nomi dei file presenti in essa,
 inserendoli in un buffer e ritornando il numero di file presenti */

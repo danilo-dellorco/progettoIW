@@ -14,52 +14,6 @@
 #include "utility.h"
 #include "comm.h"
 
-int create_socket() {
-	
-	struct sockaddr_in new_addr;
-	int sockfd;
-	//creazione socket
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		printf("SERVER: socket creation error\n");
-		exit(-1);
-	}
-
-	//configurazione socket
-	memset((void *)&new_addr, 0, sizeof(new_addr));
-	new_addr.sin_family = AF_INET;
-	new_addr.sin_port = htons(0);
-	new_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	//assegnazione indirizzo al socket
-	if (bind(sockfd, (struct sockaddr *)&new_addr, sizeof(new_addr)) < 0) {
-		printf("SERVER: socket bind error\n");
-		exit(-1);
-	}
-	return sockfd;
-}
-
-void set_timeout(int sockfd, int timeout) {
-	// Imposta il timeout della socket in microsecondi
-	struct timeval time;
-	time.tv_sec = 0;
-	time.tv_usec = timeout;
-	if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&time, sizeof(time)) < 0) {
-		perror("setsockopt error");
-		exit(-1);
-	}
-}
-
-// Utilizzata per il debug e l'analisi dei pacchetti inviati
-void inputs_wait(char *s){
-	char c;
-	printf("%s\n", s);
-	while (c = getchar() != '\n');
-}
-
-void clearScreen(){
-	printf("\033[2J\033[H");
-}
-
 // Genera un numero casuale e ritorna true o false in base alla probabilita di perdita passata in input
 bool is_packet_lost(int prob){
   int random = rand() %100;
@@ -69,24 +23,44 @@ bool is_packet_lost(int prob){
   return false;
 }
 
-// Stampa il timestamp con precisione ai microsecondi
-char *time_stamp(){
-	struct timeval tv;
-	struct tm* ptm;
-	char time_string[40];
- 	long microseconds;
-	char *timestamp = (char *)malloc(sizeof(char) * 16);
+// Crea una nuova socket ed effettua il binding
+int create_socket() {
+	struct sockaddr_in new_addr;
+	int sockfd;
 
-	gettimeofday(&tv,0);
-	ptm = localtime (&tv.tv_sec);
-	strftime (time_string, sizeof (time_string), "%H:%M:%S", ptm);
-	microseconds = tv.tv_usec;
-	sprintf (timestamp,"[%s.%03ld]", time_string, microseconds);
-	return timestamp;
+	// Creazione socket
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+		printf("SERVER: socket creation error\n");
+		exit(-1);
+	}
+
+	// Configurazione socket
+	memset((void *)&new_addr, 0, sizeof(new_addr));
+	new_addr.sin_family = AF_INET;
+	new_addr.sin_port = htons(0);
+	new_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	// Assegnazione indirizzo al socket
+	if (bind(sockfd, (struct sockaddr *)&new_addr, sizeof(new_addr)) < 0) {
+		printf("SERVER: socket bind error\n");
+		exit(-1);
+	}
+	return sockfd;
+}
+
+// Imposta il timeout della socket in microsecondi
+void set_socket_timeout(int sockfd, int timeout) {
+	struct timeval time;
+	time.tv_sec = 0;
+	time.tv_usec = timeout;
+	if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&time, sizeof(time)) < 0) {
+		perror("setsockopt error");
+		exit(-1);
+	}
 }
 
 // Imposta il timer di ritrasmissione
-void set_timer(int micro){
+void set_retransmission_timer(int micro){
     struct itimerval it_val;
 
 	if (micro >= MAX_RTO){
@@ -105,7 +79,23 @@ void set_timer(int micro){
 	}
 }
 
-// Stampa una barra di avanzamento relativo all'invio del file
+// Stampa il timestamp con precisione ai microsecondi
+char *time_stamp(){
+	struct timeval tv;
+	struct tm* ptm;
+	char time_string[40];
+ 	long microseconds;
+	char *timestamp = (char *)malloc(sizeof(char) * 16);
+
+	gettimeofday(&tv,0);
+	ptm = localtime (&tv.tv_sec);
+	strftime (time_string, sizeof (time_string), "%H:%M:%S", ptm);
+	microseconds = tv.tv_usec;
+	sprintf (timestamp,"[%s.%03ld]", time_string, microseconds);
+	return timestamp;
+}
+
+// Stampa una barra di avanzamento relativa all'invio/ricezione del file
 void print_percentage(int part, int total, int oldPart, char* subject){
 	if (strcmp(subject,CLIENT) != 0){
 		return;
@@ -127,4 +117,9 @@ void print_percentage(int part, int total, int oldPart, char* subject){
 	}
 	printf ("|");
 	printf (" %.2f%%\n",percentage);
+}
+
+// Pulisce la schermata del terminale
+void clearScreen(){
+	printf("\033[2J\033[H");
 }

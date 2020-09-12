@@ -2,34 +2,35 @@
 
 // PARAMETRI DI DEFAULT
 #define SERVER_PORT 25490
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP 	"127.0.0.1"
 
 // DEFINIZIONE DEI MESSAGGI DEI PACCHETTI
-#define ACK "ack"
-#define SYN "syn"
-#define SYNACK "synack"
-#define READY "ready"
-#define FIN "fin"
-#define FINACK "ackfin"
-#define FOUND "found"
-#define NFOUND "notfound"
-#define NOVERW "nooverwr"
-#define CORRUP "corruptd"
+#define ACK 	"ack"
+#define SYN 	"syn"
+#define SYNACK 	"synack"
+#define READY 	"ready"
+#define FIN 	"fin"
+#define FINACK 	"ackfin"
+#define FOUND 	"found"
+#define NFOUND 	"notfound"
+#define NOVERW 	"nooverwr"
+#define CORRUP 	"corruptd"
 
 
 // DEFINIZIONE DEI COMANDI
-#define LIST 1
-#define GET 2
-#define PUT 3
-#define CLOSE 4
+#define LIST 	1
+#define GET 	2
+#define PUT 	3
+#define CLOSE 	4
 
 // PARAMETRI SULLA TRASMISSIONE
-#define LOST_PROB 5			// 0%<=LOST_PROB<=100%
-#define TRAN_WIN 32				// Dimensione della finestra di trasmissione
-#define RECV_WIN 32			// Dimensione della finestra di ricezione
-#define PKT_SIZE 1500			// Dimensione del pacchetto
-#define MAX_RTO 300000			// Valore massimo del timeout di ritrasmissione in microsecondi
-#define MIN_RTO 100
+#define LOST_PROB 	25				// Probabilità di perdita sul pacchetto -> LOST PROB ∈ [0,100]
+#define TRAN_WIN 	16				// Dimensione della finestra di trasmissione
+#define RECV_WIN	16				// Dimensione della finestra di ricezione
+#define PKT_SIZE 	1500			// Dimensione del pacchetto
+#define MAX_RTO 	300000			// Valore massimo del timeout di ritrasmissione in microsecondi -> MAX_RTO < 1000000
+#define MIN_RTO 	100				// Valore minimo del timeout di ritrasmissione in microsecondi
+#define CLEAN_TIME 	500000			// Tempo di attesa al termine della ricezione -> CLEAN_TIME < 1000000
 
 
 // PARAMETRI SULLE CARTELLE CLIENT/SERVER
@@ -38,8 +39,8 @@
 
 
 // PARAMETRI SUI FILE
-#define MAX_FILE_LIST 100		// Massimo numero di file mostrati nella lista
-#define MAX_NAMEFILE_LEN 127	// Massimo numero di caratteri mostrato nel filename
+#define MAX_FILE_LIST	 100		// Massimo numero di file mostrati nella lista
+#define MAX_NAMEFILE_LEN 127		// Massimo numero di caratteri mostrato nel filename
 
 
 // COSTANTI PER IL CALCOLO DEL TIMEOUT

@@ -24,7 +24,9 @@ void end_transmission();
 void retransmission(int rtx_ind, char *message);
 void cumulative_ack(int received_ack);
 void set_packet_sent(int index);
+void initialize_send();
 int send_packet(int index);
+uint64_t time_now();
 
 // ACK CUMULATIVO UTILIZZATO: Inviare un ACK = N indica che tutti i pacchetti fino a N-1 sono stati ricevuti e che ora aspetto il pacchetto numero N
 
@@ -42,11 +44,11 @@ char* subj;
 bool fileTransfer = true;						// Termina l'invio dei pacchetti quando posto a false
 bool isTimerStarted = false;					// Impostato a true quando è in funzione il timer di un pacchetto, false altrimenti
 struct timeval transferEnd, transferStart;		// Utilizzati per il calcolo del tempo di trasmissione
+int64_t timeoutInterval, estimatedRTT, devRTT;	// Variabili per il calcolo del Retransmission Timeout
 socklen_t addr_len;
 struct sockaddr_in *client_addr;
 off_t file_dim;
 
-int64_t timeoutInterval = 500000, estimatedRTT = 1000, devRTT = 1;	// Valori di default del Retransmission Timeout
 
 /*
 Array di interi per tenere traccia dello stato di invio dei pacchetti
@@ -57,13 +59,6 @@ Array di interi per tenere traccia dello stato di invio dei pacchetti
 int *check_pkt;
 packet *pkt;
 
-// Ritorna l'orario attuale in microsecondi
-uint64_t time_now(){
-	struct timeval current;
-	gettimeofday(&current, 0);
-	return current.tv_sec * 1000000 + current.tv_usec;
-}
-
 // Struttura per passare argomenti al thread per la ricezione degli ACK
 pthread_t thread;
 struct thread_args
@@ -72,22 +67,6 @@ struct thread_args
     socklen_t addr_len;
 	int socket;
 };
-
-// Inizializza tutti i parametri 
-void initialize_send(){
-	SendBase = 1;
-	NextSeqNum = 1;
-	ack_num = 0;
-	tot_acked = 0;
-	tot_pkts = 0;	
-	fileTransfer = true;
-	isTimerStarted = false;
-	timeoutInterval = 500000;
-	estimatedRTT = 1000;
-	devRTT = 1;
-	num_packet_lost = 0;
-	subj = NULL;
-}
 
 // Thread che gestisce la ricezione degli ack da parte del ricevente, compresi gli ack duplicati
 void *receive_ack(void *arg){
@@ -102,8 +81,9 @@ void *receive_ack(void *arg){
 		if (recvfrom(socket, &ack_num, sizeof(int), 0, (struct sockaddr *)client_addr, &addr_len) < 0){
 			perror ("Errore ricezione ack");
 			exit(-1);
-		}	
+		}
 		//printf ("%s SendBase: %d | Ricevuto ACK numero: %d\n",time_stamp(),SendBase,ack_num);
+
 
 		// Ricevuto ACK non duplicato
 		if (ack_num>SendBase){
@@ -116,10 +96,11 @@ void *receive_ack(void *arg){
 			print_percentage(tot_acked,tot_pkts,old_acked,subj);
 			if (tot_acked == tot_pkts){
 				fileTransfer = false; //Stoppa il thread e l'invio dei pacchetti se arrivati alla fine del file
-				set_timer(0);
+				set_retransmission_timer(0);
 				break;
 			}
 		}
+
 		
 		//Ricevuto ACK duplicato
 		else {
@@ -149,7 +130,6 @@ void tcp_sender(int socket, struct sockaddr_in *receiver_addr, int fd, char* sub
 	t_args.socket = socket;
 
 	int ret = pthread_create(&thread,NULL,receive_ack,(void*)&t_args); //Creazione del thread per la ricezione degli ACK	
-	srand(time(NULL));
 	
 	// Calcolo del numero totale di pacchetti da inviare
 	file_dim = lseek(fd, 0, SEEK_END);
@@ -206,11 +186,27 @@ void send_window(int socket, struct sockaddr_in *client_addr, packet *pkt){
 		
 		if (!isTimerStarted){
 			isTimerStarted = true;
-			set_timer(timeoutInterval);
+			set_retransmission_timer(timeoutInterval);
 		}
 	}
 }
 
+// Invia un pacchetto oppure ne simula la perdita
+int send_packet(int index){
+	set_packet_sent(index);
+	if (is_packet_lost(LOST_PROB)){
+		set_packet_sent(index);
+		num_packet_lost++;
+		return 0;
+	}
+	if (sendto(sock, pkt+index, PKT_SIZE, 0, (struct sockaddr *)client_addr, addr_len)<0){
+		perror ("Sendto Error");
+		return -1;
+	}
+	return 1;
+}
+
+// Gestisce la ritrasmissione a seguito della scadenza del timeout di ritrasmissione
 void timeout_routine(){
 	int rtx_seq = SendBase;
 	isTimerStarted = false;
@@ -218,6 +214,7 @@ void timeout_routine(){
 	return;
 }
 
+// Imposta un pacchetto come inviato tramite check_pkt
 void set_packet_sent(int index){
 	if (check_pkt[index] == 0){
 		pkt[index].sent_time = time_now();
@@ -240,7 +237,7 @@ void retransmission(int rtx_ind, char *message){
 	//printf ("%s | rtx pkt %d\n",message,pkt[rtx_ind].seq_num);
 	send_packet(rtx_ind);
 	isTimerStarted = true;
-	set_timer(timeoutInterval);
+	set_retransmission_timer(timeoutInterval);
 }
 
 // Imposta come acked tutti i pacchetti con numero di sequenza inferiore a quello ricevuto
@@ -254,7 +251,7 @@ void cumulative_ack(int received_ack){
 // Stoppa il timer e stampa il tempo impiegato per l'invio del file
 void end_transmission(){
 	printf("\n_____________________ Transmission end _______________________\n\n");
-	set_timer(0);
+	set_retransmission_timer(0);
 	printf("File transfer finished\n");
 	gettimeofday(&transferEnd, NULL);
 	double tm=transferEnd.tv_sec-transferStart.tv_sec+(double)(transferEnd.tv_usec-transferStart.tv_usec)/1000000;
@@ -265,16 +262,26 @@ void end_transmission(){
 	printf("______________________________________________________________\n");
 }
 
-int send_packet(int index){
-	set_packet_sent(index);
-	if (is_packet_lost(LOST_PROB)){
-		set_packet_sent(index);
-		num_packet_lost++;
-		return 0;
-	}
-	if (sendto(sock, pkt+index, PKT_SIZE, 0, (struct sockaddr *)client_addr, addr_len)<0){
-		perror ("Sendto Error");
-		return -1;
-	}
-	return 1;
+// Ritorna l'orario attuale in microsecondi
+uint64_t time_now(){
+	struct timeval current;
+	gettimeofday(&current, 0);
+	return current.tv_sec * 1000000 + current.tv_usec;
+}
+
+// Inizializza tutti i parametri 
+void initialize_send(){
+	srand (time(NULL));// Randomizza la scelta dei numeri per la simulazione della perdita dei pacchetti
+	SendBase = 1;
+	NextSeqNum = 1;
+	ack_num = 0;
+	tot_acked = 0;
+	tot_pkts = 0;	
+	fileTransfer = true;
+	isTimerStarted = false;
+	timeoutInterval = MAX_RTO;
+	estimatedRTT = 1000;
+	devRTT = 1;
+	num_packet_lost = 0;
+	subj = NULL;
 }

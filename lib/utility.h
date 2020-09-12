@@ -13,8 +13,8 @@
 void inputs_wait(char *s);
 bool is_packet_lost(int prob);
 char *time_stamp();
-void set_timer(int micro);
+void set_retransmission_timer(int micro);
 void print_percentage(int part, int total, int oldPart, char* subject);
 void clearScreen();
 int create_socket();
-void set_timeout(int, int);
+void set_socket_timeout(int, int);
