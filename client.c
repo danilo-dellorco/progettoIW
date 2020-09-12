@@ -161,8 +161,8 @@ menu:
 				printf("%s\n", list_files[i]);	
 			}
 			printf("============================================ \n\n");
-
 			printf("\n> Type the file name to upload: ");
+
 			memset(buff, 0, sizeof(buff));
 			scanf("%s", buff);
 			snprintf(path, 12+strlen(buff)+1, "clientFiles/%s", buff);
@@ -180,12 +180,15 @@ menu:
 			}
 			
 			// Comunico al server il nome del client che voglio caricare
-			printf ("%s CLIENT: Invio nome file\n", time_stamp());
+			printf ("%s CLIENT: Invio nome file: %s\n", time_stamp(),buff);
 			control = sendto(client_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&server_address, addr_len);
 			if (control < 0) {
 				printf("CLIENT: request failed (sending)\n");
 				exit(-1);
 			}
+
+			memset(buff, 0, sizeof(NOVERW));
+
 
 			// Il client resta in attesa di conferma dal server prima di caricare il file
 			printf ("%s CLIENT: Attesa permesso upload\n", time_stamp());

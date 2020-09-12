@@ -3,7 +3,6 @@
 // PARAMETRI DI DEFAULT
 #define SERVER_PORT 25490
 #define SERVER_IP "127.0.0.1"
-#define REQUEST_SEC 10
 
 // DEFINIZIONE DEI MESSAGGI DEI PACCHETTI
 #define SYN "syn"
@@ -13,7 +12,7 @@
 #define FINACK "ackfin"
 #define FOUND "found"
 #define NFOUND "notfound"
-#define NOVERW "nooverwrite"
+#define NOVERW "nooverwr"
 #define READY "ready"
 
 // DEFINIZIONE DEI COMANDI

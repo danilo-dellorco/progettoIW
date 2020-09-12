@@ -16,7 +16,7 @@
 
 int server_folder_files(char *list_files[MAX_FILE_LIST]);
 void server_setup_conn( int *, struct sockaddr_in *);
-int server_reliable_conn(int , struct sockaddr_in *); // vedere se per tcp va bene
+int server_reliable_conn(int , struct sockaddr_in *);
 void server_reliable_close (int server_sock, struct sockaddr_in* client_addr);
 
 
@@ -57,7 +57,7 @@ int main(int argc, char **argv){
             }
 
 
-        request:
+request:
             printf("\n=======================================\n");
             printf("> Server waiting for request....\n");
             memset(buff, 0, sizeof(buff));
@@ -69,149 +69,148 @@ int main(int argc, char **argv){
                 close(child_sock);
                 return 0;
             }
-
-
             clearScreen();
+
+
             switch (*(int*) buff ){
 
-    //****************************************************************************************************************************************
-                case LIST:
-                    printf("> LIST request\n");
-                    printf("=======================================\n\n");
-                    num_files = server_folder_files(list_files);
+ //****************************************************************************************************************************************
+            case LIST:
+                printf("> LIST request\n");
+                printf("=======================================\n\n");
+                num_files = server_folder_files(list_files);
 
-                    fd = open("file_list.txt", O_CREAT | O_TRUNC | O_RDWR, 0666);
-                    if(fd<0){
-                        printf("SERVER: error opening file_list\n");
-                        close(child_sock);
-                        return 1;
-                    }
+                fd = open("file_list.txt", O_CREAT | O_TRUNC | O_RDWR, 0666);
+                if(fd<0){
+                    printf("SERVER: error opening file_list\n");
+                    close(child_sock);
+                    return 1;
+                }
 
-                    // Scrivo tutti i file in serverFiles nel file che verrà inviato al client
-                    int i=0;
-                    while(i<num_files) {
-                        memset(buff, 0, sizeof(buff));
-                        snprintf(buff, strlen(list_files[i])+2, "%s\n", list_files[i]); //+2 per terminatore di stringa e \n
-                        write(fd, buff, strlen(buff));
-                        i++;
-                    }
-
-                    read(fd, (void *)&buffToSend, strlen(buffToSend));
-
-                    // Inizio l'invio del file
-                    sender(child_sock, &client_address,fd);
-                    close(fd);
-                    remove("file_list.txt");
-                    break;
-
-    //****************************************************************************************************************************************
-                case GET:
-                    printf("> DOWNLOAD request\n");
+                // Scrivo tutti i file in serverFiles nel file che verrà inviato al client
+                int i=0;
+                while(i<num_files) {
                     memset(buff, 0, sizeof(buff));
-                    control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len); 
-                    if (control < 0) {
-                        printf("SERVER: file transfer failed (1)\n");
-                        perror("ERROR");
-                        free(buff);
-                        free(path);
-                        close(child_sock);
-                        return 1;
-                    }
+                    snprintf(buff, strlen(list_files[i])+2, "%s\n", list_files[i]); //+2 per terminatore di stringa e \n
+                    write(fd, buff, strlen(buff));
+                    i++;
+                }
 
-                    // +1 per lo /0 altrimenti lo sostituisce all' ultimo carattere
-                    snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff); 
-                    fd = open(path, O_RDONLY);
-                    printf("> Sending %s\n",path);
-                    if(fd == -1){
+                read(fd, (void *)&buffToSend, strlen(buffToSend));
 
-                        // Il client ha rifiutato di sovrascrivere il file
-                        if (strcmp(buff,NOVERW) == 0){
-                            printf ("Download annullato dal client\n");
-                            goto request;
-                        }                    
-                    
-                        // Comunico al client che il file non è presente
-                        printf("SERVER: file not found\n");
-                        if (sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
-                            printf("SERVER: error sendto\n");
-                            goto request;
-                        }
+                // Inizio l'invio del file
+                sender(child_sock, &client_address,fd);
+                close(fd);
+                remove("file_list.txt");
+                break;
 
-                        free(buff);
-                        free(path);
-                        close(child_sock);
-                        return 1;
-                    }
-
-                    // Comunico al client che il file è presente e può essere scaricato
-                    if (sendto(child_sock, FOUND, strlen(FOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
-                        printf("SERVER: error sendto\n");
-                        return 1;
-                    }
-                    printf("=======================================\n\n");
-
-                    // Inizio l'invio del file
-                    sender(child_sock, &client_address,fd);          
-                    break;
-
-    //**************************************************************************************************************************************
-                case PUT:
-                    printf("> UPLOAD request\n");
-                    printf("=======================================\n\n");
-                    memset(buff, 0, sizeof(buff));
-                    control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len);
-                    if (control < 0) {
-                        printf("%s SERVER: file transfer failed (1)\n",time_stamp());
-                        free(buff);
-                        free(path);
-                        close(child_sock);
-                        return 1;
-                    }
-                    snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff);
-                    memset(buff, 0, sizeof(buff));
-
-                    // Il file è già presente nel server, invia al client NOVERW per annullare l'upload.
-                    fd = open(path, O_RDONLY);
-                    if(fd>0){
-                        printf("%s SERVER: The file already exists, you can not overwrite files on server.\n", time_stamp());
-                        sendto(child_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&client_address, addr_len);
-                        close(fd);
-                        goto request;
-                    }
-
-                    // Il file non è presente nel server, invia al client NFOUND per confermare di poter caricare il file
-                    sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
-                    close(fd);
-                    fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
-                    printf ("Receiving %s\n",path);
-
-                    // Inizio la ricezione del file
-                    control=receiver(child_sock, &client_address,fd);
-                    if(control == -1) {
-                        printf ("recv error\n");
-                        close(fd);
-                        remove(path);
-                        free(buff);
-                        free(path);
-                        close(child_sock);
-                        return 1;
-                    }
-                    close(fd);
-                    break;
-
-    //**************************************************************************************************************************************
-                case CLOSE:
-                    server_reliable_close(child_sock, &client_address);
+//****************************************************************************************************************************************
+            case GET:
+                printf("> DOWNLOAD request\n");
+                memset(buff, 0, sizeof(buff));
+                control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len); 
+                if (control < 0) {
+                    printf("SERVER: file transfer failed (1)\n");
+                    perror("ERROR");
                     free(buff);
                     free(path);
                     close(child_sock);
-                    return 0;
+                    return 1;
+                }
 
-    //**************************************************************************************************************************************
-                default:
-                    printf("Wrong request\n\n");
-                    break;  
-            }
+                // +1 per lo /0 altrimenti lo sostituisce all' ultimo carattere
+                snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff); 
+                fd = open(path, O_RDONLY);
+                printf("> Sending %s\n",path);
+                if(fd == -1){
+
+                    // Il client ha rifiutato di sovrascrivere il file
+                    if (strcmp(buff,NOVERW) == 0){
+                        printf ("Download annullato dal client\n");
+                        goto request;
+                    }                    
+                
+                    // Comunico al client che il file non è presente
+                    printf("SERVER: file not found\n");
+                    if (sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
+                        printf("SERVER: error sendto\n");
+                        goto request;
+                    }
+
+                    free(buff);
+                    free(path);
+                    close(child_sock);
+                    return 1;
+                }
+
+                // Comunico al client che il file è presente e può essere scaricato
+                if (sendto(child_sock, FOUND, strlen(FOUND), 0, (struct sockaddr *)&client_address, addr_len) < 0) {
+                    printf("SERVER: error sendto\n");
+                    return 1;
+                }
+                printf("=======================================\n\n");
+
+                // Inizio l'invio del file
+                sender(child_sock, &client_address,fd);          
+                break;
+
+//**************************************************************************************************************************************
+            case PUT:
+                printf("> UPLOAD request\n");
+                printf("=======================================\n\n");
+                memset(buff, 0, sizeof(buff));
+                control = recvfrom(child_sock, buff, PKT_SIZE, 0, (struct sockaddr *)&client_address, &addr_len);
+                if (control < 0) {
+                    printf("%s SERVER: file transfer failed (1)\n",time_stamp());
+                    free(buff);
+                    free(path);
+                    close(child_sock);
+                    return 1;
+                }
+                snprintf(path, 12+strlen(buff)+1, "serverFiles/%s", buff);
+                printf ("Receiving %s\n",path);
+
+                // Il file è già presente nel server, invia al client NOVERW per annullare l'upload.
+                fd = open(path, O_RDONLY);
+                if(fd>0){
+                    printf("%s SERVER: The file already exists, you can not overwrite files on server.\n", time_stamp());
+                    sendto(child_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&client_address, addr_len);
+                    close(fd);
+                    goto request;
+                }
+
+                // Il file non è presente nel server, invia al client NFOUND per confermare di poter caricare il file
+                sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
+                close(fd);
+                fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
+
+                // Inizio la ricezione del file
+                control=receiver(child_sock, &client_address,fd);
+                if(control == -1) {
+                    printf ("recv error\n");
+                    close(fd);
+                    remove(path);
+                    free(buff);
+                    free(path);
+                    close(child_sock);
+                    return 1;
+                }
+                close(fd);
+                break;
+
+//**************************************************************************************************************************************
+            case CLOSE:
+                server_reliable_close(child_sock, &client_address);
+                free(buff);
+                free(path);
+                close(child_sock);
+                return 0;
+
+//**************************************************************************************************************************************
+            default:
+                printf("Wrong request\n\n");
+                break;  
+        }
                 goto request;
                 }
             }
