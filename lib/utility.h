@@ -16,6 +16,5 @@ char *time_stamp();
 void set_timer(int micro);
 void print_percentage(int part, int total, int oldPart);
 void clearScreen();
-int create_socket(int);
-void set_timeout_sec(int, int);
+int create_socket();
 void set_timeout(int, int);

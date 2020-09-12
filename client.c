@@ -54,6 +54,7 @@ menu:
 	printf("============================================\n\n");
 	printf("> Choose an operation: ");
 	scanf ("%d",&answer);
+	clearScreen();
 
   	switch (answer) {
 //****************************************************************************************************************************************
@@ -153,7 +154,7 @@ menu:
 //****************************************************************************************************************************************
 		case PUT:
 			// Mostro a schermo la lista di file presenti nella cartella del client
-			printf("\n\n\n========= File available to upload ========= \n");
+			printf("========= File available to upload ========= \n");
 			num_files = client_folder_files(list_files);
 			int i;
 			for (i = 0; i < num_files; i++) {
@@ -185,7 +186,6 @@ menu:
 				printf("CLIENT: request failed (sending)\n");
 				exit(-1);
 			}
-			//+1 per lo /0 altrimenti lo sostituisce a ultimo carattere
 
 			// Il client resta in attesa di conferma dal server prima di caricare il file
 			printf ("%s CLIENT: Attesa permesso upload\n", time_stamp());
@@ -196,6 +196,8 @@ menu:
 				printf ("%s File già presente sul server, upload annullato\n", time_stamp());
 				goto menu;
 			}
+			printf ("%s Autorizzazione concessa | %s\n", time_stamp(),buff);
+			printf ("server address: %d",server_address.sin_port);
 
 			// Inizio l'invio del file
 			sender(client_sock, &server_address,fd);
