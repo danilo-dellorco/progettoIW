@@ -175,13 +175,13 @@ int main(int argc, char **argv){
                 fd = open(path, O_RDONLY);
                 if(fd>0){
                     printf("%s SERVER: The file already exists, you can not overwrite files on server.\n", time_stamp());
-                    sendto(server_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&client_address, addr_len);
+                    sendto(child_sock, NOVERW, strlen(NOVERW), 0, (struct sockaddr *)&client_address, addr_len);
                     close(fd);
                     goto request;
                 }
 
                 // Il file non è presente nel server, invia al client NFOUND per confermare di poter caricare il file
-                sendto(server_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
+                sendto(child_sock, NFOUND, strlen(NFOUND), 0, (struct sockaddr *)&client_address, addr_len);
                 close(fd);
                 fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0666);
 

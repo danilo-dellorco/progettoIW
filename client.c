@@ -194,7 +194,7 @@ menu:
 			// Se ricevo NOVERW il file che voglio caricare è già presente sul server. Viene annullato l'upload.
 			if (strcmp(buff,NOVERW) == 0){
 				printf ("%s File già presente sul server, upload annullato\n", time_stamp());
-				goto menu;
+				break;
 			}
 
 			// Inizio l'invio del file

@@ -23,7 +23,7 @@
 #define CLOSE 4
 
 // PARAMETRI SULLA TRASMISSIONE
-#define LOST_PROB 40			// 0%<=LOST_PROB<=100%
+#define LOST_PROB 10			// 0%<=LOST_PROB<=100%
 #define TRAN_WIN 64				// Dimensione della finestra di trasmissione
 #define RECV_WIN 64			// Dimensione della finestra di ricezione
 #define PKT_SIZE 1500			// Dimensione del pacchetto
