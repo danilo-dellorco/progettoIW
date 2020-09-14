@@ -31,6 +31,8 @@
 #define MAX_RTO 	300000			// Valore massimo del timeout di ritrasmissione in microsecondi -> MAX_RTO < 1000000
 #define MIN_RTO 	100				// Valore minimo del timeout di ritrasmissione in microsecondi
 #define CLEAN_TIME 	500000			// Tempo di attesa al termine della ricezione -> CLEAN_TIME < 1000000
+#define STATIC_RTO	150000			// Valore del RTO nel caso in cui si scelga di non utilizzare quello adattivo
+#define ADAPTIVE_RTO 1				// 1 = Timeout Adattivo | 0 = Timeout Statico
 
 
 // PARAMETRI SULLE CARTELLE CLIENT/SERVER
@@ -50,6 +52,7 @@
 // ALTRE COSTANTI
 #define CLIENT "client"
 #define SERVER "server"
+
 
 
 // DEFINIZIONE DELLA STRUTTURA DI UN PACCHETTO

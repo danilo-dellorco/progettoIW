@@ -63,12 +63,16 @@ void set_socket_timeout(int sockfd, int timeout) {
 void set_retransmission_timer(int micro){
     struct itimerval it_val;
 
-	if (micro >= MAX_RTO){
+	if (ADAPTIVE_RTO == 0){
+		micro = STATIC_RTO;
+	}
+	else if (micro >= MAX_RTO){
 		micro = MAX_RTO;
 	}
-	if (micro <= MIN_RTO && micro != 0){
+	else if (micro <= MIN_RTO && micro != 0){
 		micro = MIN_RTO;
 	}
+
 	it_val.it_value.tv_sec = 0;
 	it_val.it_value.tv_usec = micro;
 	it_val.it_interval.tv_sec = 0;
