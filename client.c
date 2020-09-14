@@ -8,7 +8,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include "./lib/comm.h"
+#include "./lib/config.h"
 #include "./lib/tcp_receiver.h"
 #include "./lib/tcp_sender.h"
 #include "./lib/utility.h"
@@ -327,7 +327,7 @@ void client_reliable_close (int client_sock, struct sockaddr_in *server_addr) {
 	if (control < 0) {
 		printf("CLIENT: close failed (sending FIN)\n");
 		exit(-1);
-	}//Se un client non riesce a ben connettersi, il server non forka
+	}
 
 
 	// In attesa del FINACK

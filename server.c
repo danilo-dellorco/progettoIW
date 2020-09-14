@@ -9,7 +9,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include "./lib/comm.h"
+#include "./lib/config.h"
 #include "./lib/tcp_sender.h"
 #include "./lib/tcp_receiver.h"
 #include "./lib/utility.h"

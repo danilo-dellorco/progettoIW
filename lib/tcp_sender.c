@@ -4,7 +4,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <stdbool.h>
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +12,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/param.h>
-#include "comm.h"
+#include "config.h"
 #include "utility.h"
 
 void timeout_routine();
@@ -96,7 +95,7 @@ void *receive_ack(void *arg){
 			print_percentage(tot_acked,tot_pkts,old_acked,subj);
 			if (tot_acked == tot_pkts){
 				fileTransfer = false; //Stoppa il thread e l'invio dei pacchetti se arrivati alla fine del file
-				set_retransmission_timer(0);
+				stop_retransmission_timer();
 				break;
 			}
 		}
@@ -251,7 +250,7 @@ void cumulative_ack(int received_ack){
 // Stoppa il timer e stampa il tempo impiegato per l'invio del file
 void end_transmission(){
 	printf("\n_____________________ Transmission end _______________________\n\n");
-	set_retransmission_timer(0);
+	stop_retransmission_timer();
 	printf("File transfer finished\n");
 	gettimeofday(&transferEnd, NULL);
 	double tm=transferEnd.tv_sec-transferStart.tv_sec+(double)(transferEnd.tv_usec-transferStart.tv_usec)/1000000;

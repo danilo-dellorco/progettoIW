@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <stdbool.h>
 #include "utility.h"
-#include "comm.h"
+#include "config.h"
 
 // Genera un numero casuale e ritorna true o false in base alla probabilita di perdita passata in input
 bool is_packet_lost(int prob){
@@ -63,13 +63,13 @@ void set_socket_timeout(int sockfd, int timeout) {
 void set_retransmission_timer(int micro){
     struct itimerval it_val;
 
-	if (ADAPTIVE_RTO == 0){
-		micro = STATIC_RTO;
+	if (STATIC_RTO == 1){
+		micro = RTO_VALUE;
 	}
 	else if (micro >= MAX_RTO){
 		micro = MAX_RTO;
 	}
-	else if (micro <= MIN_RTO && micro != 0){
+	else if (micro <= MIN_RTO){
 		micro = MIN_RTO;
 	}
 
@@ -80,6 +80,18 @@ void set_retransmission_timer(int micro){
 	if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
 		perror("Set Timer Error:");
 		exit(1);
+	}
+}
+
+void stop_retransmission_timer(){
+	struct itimerval it_val;
+	it_val.it_value.tv_sec = 0;
+	it_val.it_value.tv_usec = 0;
+	it_val.it_interval.tv_sec = 0;
+	it_val.it_interval.tv_usec = 0;
+	if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
+		perror("Stop Timer Error:");
+		exit(-1);
 	}
 }
 

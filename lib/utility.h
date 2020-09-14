@@ -18,3 +18,4 @@ void print_percentage(int part, int total, int oldPart, char* subject);
 void clearScreen();
 int create_socket();
 void set_socket_timeout(int, int);
+void stop_retransmission_timer();
