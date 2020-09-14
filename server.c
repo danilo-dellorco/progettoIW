@@ -46,8 +46,6 @@ int main(int argc, char **argv){
         if (server_reliable_conn(server_sock, &client_address) == 0){
         pid = fork();
         num_client++;
-        //char *ip = inet_ntoa(client_address.sin_addr);
-        //int port = htons (client_address.sin_port);
         
         if (pid < 0){
             printf("> SERVER: fork error\n");
@@ -58,7 +56,8 @@ int main(int argc, char **argv){
             child_sock = create_socket();
             send_ready_pkt.clientNum = num_client;
             snprintf(send_ready_pkt.message,6,"%s",READY);
-//            printf("%s %d\n", send_ready_pkt.message, send_ready_pkt.clientNum);
+
+            // Invio del pacchetto di READY che comunica al client il suo ID di connessione
             control = sendto(child_sock, &send_ready_pkt, sizeof(send_ready_pkt),0, (struct sockaddr *)&client_address, addr_len);
             if (control < 0) {
                 printf("> SERVER %d: port comunication failed\n", pid);

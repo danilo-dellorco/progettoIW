@@ -41,13 +41,9 @@ int main (int argc, char** argv) {
 	client_reliable_conn(client_sock, &server_address);
   	memset(&recv_ready_pkt, 0, sizeof(ready_pkt));
 	
-	
+	// Ricezione del pacchetto di READY per ricevere un ID dal server
 	control = recvfrom(client_sock, &recv_ready_pkt, sizeof(ready_pkt), 0, (struct sockaddr *)&server_address, &addr_len);
-
-	clientNum = recv_ready_pkt.clientNum;  
-	printf("clientNum: %d\n", clientNum);
-	printf("message  : %s\n",recv_ready_pkt.message);
-
+	clientNum = recv_ready_pkt.clientNum;
 	if (control < 0 || strcmp(READY,recv_ready_pkt.message) != 0) {
 		printf("CLIENT: server dispatching failed\n");
 		exit(-1);
@@ -56,7 +52,7 @@ int main (int argc, char** argv) {
 	
 
 menu:
-	printf("\n\n________________________ COMMAND LIST | CLIENT %d ________________________\n\n", clientNum);
+	printf("\n\n__________________ COMMAND LIST | CLIENT %d ___________________\n\n", clientNum);
 	printf("1) List available files on the server\n");
 	printf("2) Download a file from the server\n");
 	printf("3) Upload a file to the server\n");
@@ -70,7 +66,7 @@ menu:
 //****************************************************************************************************************************************
     	case LIST:
 			printf("==============================================================\n");
-			printf("\t\t\t LIST REQUEST | CLIENT %d\n", clientNum);
+			printf("\t\t LIST REQUEST | CLIENT %d\n", clientNum);
 			printf("==============================================================\n");
 
 
@@ -102,7 +98,7 @@ menu:
 //****************************************************************************************************************************************
 		case GET:
 			printf("==============================================================\n");
-			printf("\t\t\t  GET REQUEST | CLIENT %d\n", clientNum);
+			printf("\t\t  GET REQUEST | CLIENT %d\n", clientNum);
 			printf("==============================================================\n");
 
 
@@ -171,7 +167,7 @@ menu:
 //****************************************************************************************************************************************
 		case PUT:
 			printf("==============================================================\n");
-			printf("\t\t\t  PUT REQUEST | CLIENT %d\n", clientNum);
+			printf("\t\t  PUT REQUEST | CLIENT %d\n", clientNum);
 			printf("==============================================================\n");
 
 
