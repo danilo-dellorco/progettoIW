@@ -18,6 +18,7 @@ int server_folder_files(char *list_files[MAX_FILE_LIST]);
 void server_setup_conn( int *, struct sockaddr_in *);
 int server_reliable_conn(int , struct sockaddr_in *);
 void server_reliable_close (int server_sock, struct sockaddr_in* client_addr);
+void print_config();
 
 
 
@@ -36,7 +37,8 @@ int main(int argc, char **argv){
 	char *list_files[MAX_FILE_LIST];
     ready_pkt send_ready_pkt;
     
-    clearScreen(); 
+    clearScreen();
+    print_config(); 
     server_setup_conn(&server_sock, &server_address);
     printf ("%s SERVER: Waiting for client connections\n",time_stamp());
 
@@ -370,4 +372,21 @@ int server_folder_files(char *list_files[MAX_FILE_LIST]) {
         perror ("Couldn't open the directory");
     }
     return i;
+}
+
+void print_config(){
+    printf ("********************** Configuration ***********************\n");
+    printf ("LOST_PROB| %d\n",LOST_PROB);
+    printf ("WIN_SIZE | %d\n",TRAN_WIN);
+    if (STATIC_RTO == 1){
+        printf ("RTO_TYPE | Static\n");
+        printf ("RTO_VALUE| %d\n",RTO_VALUE);
+    }
+    else{
+        printf ("RTO_TYPE | Adaptive\n");
+        printf ("MIN_RTO  | %d\n",MIN_RTO);
+        printf ("MAX_RTO  | %d\n",MAX_RTO);
+    }
+    printf ("************************************************************\n\n");
+
 }
