@@ -40,7 +40,6 @@ int main (int argc, char** argv) {
 	client_setup_conn(&client_sock , &server_address);
 	client_reliable_conn(client_sock, &server_address);
   	memset(&recv_ready_pkt, 0, sizeof(ready_pkt));
-	
 	// Ricezione del pacchetto di READY per ricevere un ID dal server
 	control = recvfrom(client_sock, &recv_ready_pkt, sizeof(ready_pkt), 0, (struct sockaddr *)&server_address, &addr_len);
 	clientNum = recv_ready_pkt.clientNum;

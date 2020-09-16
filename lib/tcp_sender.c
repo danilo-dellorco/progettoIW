@@ -153,7 +153,7 @@ void tcp_sender(int socket, struct sockaddr_in *receiver_addr, int fd, char* sub
 	lseek(fd, 0, SEEK_SET);
 	gettimeofday(&transferStart, NULL);
 
-	// Assegnazione dei numeri di sequenza ai pacchetti da inviare
+	// Suddivisione del file da inviare in pacchetti e assegnazione dei numeri di sequenza ad ognuno di essi
 	for(i=0; i<tot_pkts; i++){
 		pkt[i].seq_num = i+1;
 		pkt[i].num_pkts = tot_pkts;

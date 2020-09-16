@@ -208,7 +208,7 @@ request:
                 free(buff);
                 free(path);
                 close(child_sock);
-                num_client--;                               // NON FUNZIONA PERCHE' IL FIGLIO MODIFICA LE SUE VARIABILI LOCALI
+                num_client--;                             
                 return 0;
 
 //**************************************************************************************************************************************
@@ -239,17 +239,6 @@ void server_setup_conn( int *server_sock, struct sockaddr_in *server_addr){
     server_addr->sin_family = AF_INET;
     server_addr->sin_port = htons(SERVER_PORT);
     server_addr->sin_addr.s_addr = htonl(INADDR_ANY);
-
-
-    /* htons = host-to-network
-    converte porta da rappresentazione/binaria dell'indirizzo/numero di porta
-    a valore binario da inserire nella struttura sockaddr_in*/
-
-    /* associa al socket l'indirizzo e porta locali, serve a far sapere al SO a quale processo vanno inviati i dati ricevuti dalla rete*/
-    /* sockfd = descrittore socket
-        addr = puntatore a struck contentente l'indirizzo locale -> RICHIEDE struck sockadrr * addr
-        len = dimensione in byte della struct sopra */
-
 
     if (bind(*server_sock, (struct sockaddr *)server_addr, sizeof(*server_addr)) < 0) {
         printf("> SERVER: socket bind error\n");
