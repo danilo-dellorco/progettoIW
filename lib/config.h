@@ -25,14 +25,14 @@
 
 // PARAMETRI SULLA TRASMISSIONE
 #define LOST_PROB 	15				// Probabilità di perdita sul pacchetto -> LOST PROB ∈ [0,100]
-#define TRAN_WIN 	64				// Dimensione della finestra di trasmissione
-#define RECV_WIN	64				// Dimensione della finestra di ricezione
+#define TRAN_WIN 	16				// Dimensione della finestra di trasmissione
+#define RECV_WIN	16				// Dimensione della finestra di ricezione
 #define PKT_SIZE 	1500			// Dimensione del pacchetto
 #define MAX_RTO 	300000			// Valore massimo del timeout di ritrasmissione in microsecondi -> MAX_RTO < 1000000
-#define MIN_RTO 	300				// Valore minimo del timeout di ritrasmissione in microsecondi
+#define MIN_RTO 	200				// Valore minimo del timeout di ritrasmissione in microsecondi
 #define CLEAN_TIME 	500000			// Tempo di attesa al termine della ricezione -> CLEAN_TIME < 1000000
-#define STATIC_RTO	1				// 0 = Timeout Adattivo | 1 = Timeout Statico
-#define RTO_VALUE	10000			// Valore del RTO nel caso in cui si scelga di non utilizzare quello adattivo
+#define STATIC_RTO	0				// 0 = Timeout Adattivo | 1 = Timeout Statico
+#define RTO_VALUE	500000			// Valore del RTO nel caso in cui si scelga di non utilizzare quello adattivo
 
 
 // PARAMETRI SULLE CARTELLE CLIENT/SERVER
